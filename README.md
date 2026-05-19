@@ -1,2 +1,2 @@
-# Plataforma-Kixikila-
+# Plataforma-Kixikila
 Rede coletiva de poupanças
