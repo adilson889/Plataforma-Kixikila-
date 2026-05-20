@@ -42,6 +42,13 @@ const KixikilaManager = (() => {
     return dados.perfil;
   }
 
+  // ── ELIMINAR CONTA ──────────────────────────────────────────
+  async function eliminarConta(telefone, senha) {
+    const dados = await post('auth/eliminar', { telefone, senha });
+    limparSessao();
+    return dados;
+  }
+
   // ── PERFIL ──────────────────────────────────────────────────
   async function atualizarPerfil({ telefone, nome, genero, cor, foto_perfil, senha }) {
     const dados = await post('perfil', { telefone, nome, genero, cor, foto_perfil, senha });
@@ -169,7 +176,7 @@ const KixikilaManager = (() => {
 
   return {
     getSessao, setSessao, limparSessao,
-    registar, entrar,
+    registar, entrar, eliminarConta,
     atualizarPerfil, carregarPerfil, carregarStats, carregarReputacao,
     carregarMeusGrupos, carregarFeed,
     criarGrupo, carregarGrupo, entrarGrupo,
