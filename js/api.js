@@ -1,15 +1,12 @@
 const KixikilaManager = (() => {
   const BASE_URL = 'https://sire-kixikila-api.vercel.app/';
-
   let _sessao = null;
 
-  function getSessao() { return _sessao; }
-
-  function setSessao(perfil) {
+  function getSessao()        { return _sessao; }
+  function setSessao(perfil)  {
     _sessao = { perfil };
     try { sessionStorage.setItem('kx_sessao', JSON.stringify(perfil)); } catch (_) {}
   }
-
   function limparSessao() {
     _sessao = null;
     try { sessionStorage.removeItem('kx_sessao'); } catch (_) {}
@@ -17,9 +14,8 @@ const KixikilaManager = (() => {
 
   async function post(endpoint, corpo) {
     const r = await fetch(BASE_URL + endpoint, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify(corpo)
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(corpo)
     });
     const dados = await r.json();
     if (!r.ok) throw new Error(dados.erro || dados.message || `Erro ${r.status}`);
@@ -27,12 +23,13 @@ const KixikilaManager = (() => {
   }
 
   async function get(endpoint) {
-    const r = await fetch(BASE_URL + endpoint);
+    const r     = await fetch(BASE_URL + endpoint);
     const dados = await r.json();
     if (!r.ok) throw new Error(dados.erro || `Erro ${r.status}`);
     return dados;
   }
 
+  // ── AUTH ────────────────────────────────────────────────────
   async function registar({ telefone, nome, senha, foto_perfil }) {
     const dados = await post('auth/registar', { telefone, nome, senha, foto_perfil });
     setSessao(dados.perfil);
@@ -45,6 +42,7 @@ const KixikilaManager = (() => {
     return dados.perfil;
   }
 
+  // ── PERFIL ──────────────────────────────────────────────────
   async function atualizarPerfil({ telefone, nome, genero, cor, foto_perfil, senha }) {
     const dados = await post('perfil', { telefone, nome, genero, cor, foto_perfil, senha });
     setSessao(dados.perfil);
@@ -55,6 +53,15 @@ const KixikilaManager = (() => {
     return get(`perfil/${telefone.replace(/\+/g, '')}`);
   }
 
+  async function carregarStats(telefone) {
+    return get(`perfil/${telefone.replace(/\+/g, '')}/stats`);
+  }
+
+  async function carregarReputacao(telefone) {
+    return get(`membro/${telefone.replace(/\+/g, '')}/reputacao`);
+  }
+
+  // ── GRUPOS DO MEMBRO ────────────────────────────────────────
   async function carregarMeusGrupos() {
     const telefone = _sessao?.perfil?.telefone;
     if (!telefone) throw new Error('Sessão inválida');
@@ -62,10 +69,19 @@ const KixikilaManager = (() => {
     return dados.grupos || [];
   }
 
+  // ── FEED ────────────────────────────────────────────────────
+  async function carregarFeed({ estado, periodicidade, limite } = {}) {
+    let query = 'grupos?';
+    if (estado)        query += `estado=${estado}&`;
+    if (periodicidade) query += `periodicidade=${periodicidade}&`;
+    if (limite)        query += `limite=${limite}`;
+    const dados = await get(query);
+    return dados.grupos || [];
+  }
+
+  // ── GRUPOS ──────────────────────────────────────────────────
   async function criarGrupo(nome, telefone, nomeAdmin, valor, frequencia, maxMembros) {
-    const dados = await post('grupo/criar', {
-      nome, telefone, nomeAdmin, valor, periodicidade: frequencia, maxMembros
-    });
+    const dados = await post('grupo/criar', { nome, telefone, nomeAdmin, valor, periodicidade: frequencia, maxMembros });
     return dados.codigo;
   }
 
@@ -77,6 +93,27 @@ const KixikilaManager = (() => {
     return post(`grupo/${codigo}/entrar`, { telefone, nome: nomeUsuario });
   }
 
+  async function sairGrupo(codigo, telefone) {
+    return post(`grupo/${codigo}/sair`, { telefone });
+  }
+
+  async function removerMembro(codigo, criador_telefone, telefone_remover) {
+    return post(`grupo/${codigo}/remover`, { criador_telefone, telefone_remover });
+  }
+
+  async function convidarMembro(codigo, criador_telefone, telefone_convidado) {
+    return post(`grupo/${codigo}/convidar`, { criador_telefone, telefone_convidado });
+  }
+
+  async function encerrarGrupo(codigo, criador_telefone) {
+    return post(`grupo/${codigo}/encerrar`, { criador_telefone });
+  }
+
+  async function carregarHistorico(codigo) {
+    const dados = await get(`grupo/${codigo}/historico`);
+    return dados.historico || [];
+  }
+
   async function registarPagamento(codigo, telefone) {
     const dados = await post(`grupo/${codigo}/pagar`, { telefone });
     return { todosPagaram: dados.todos_pagaram || false, proximo: dados.proximo || 1 };
@@ -86,11 +123,32 @@ const KixikilaManager = (() => {
     return post(`grupo/${codigo}/mensagem`, { telefone, nome, texto });
   }
 
+  // ── AVALIAÇÃO ───────────────────────────────────────────────
   async function avaliar(avaliador, avaliado, estrelas, comentario) {
     const dados = await post('avaliar', { avaliador, avaliado, estrelas, comentario });
     return dados.reputacao || 0;
   }
 
+  // ── NOTIFICAÇÕES ────────────────────────────────────────────
+  async function carregarNotificacoes() {
+    const telefone = _sessao?.perfil?.telefone;
+    if (!telefone) return { notificacoes: [], nao_lidas: 0 };
+    return get(`notificacoes/${telefone.replace(/\+/g, '')}`);
+  }
+
+  async function marcarNotificacaoLida(id) {
+    const telefone = _sessao?.perfil?.telefone;
+    if (!telefone) return;
+    return post(`notificacoes/${telefone.replace(/\+/g, '')}/marcar-lida`, { id });
+  }
+
+  // ── LEADERBOARD ─────────────────────────────────────────────
+  async function carregarLeaderboard() {
+    const dados = await get('leaderboard');
+    return dados.leaderboard || [];
+  }
+
+  // ── UTILITÁRIOS ─────────────────────────────────────────────
   function reputacaoTexto(r) {
     if (r >= 4.5) return 'Excelente';
     if (r >= 3.5) return 'Confiável';
@@ -112,9 +170,14 @@ const KixikilaManager = (() => {
   return {
     getSessao, setSessao, limparSessao,
     registar, entrar,
-    atualizarPerfil, carregarPerfil, carregarMeusGrupos,
+    atualizarPerfil, carregarPerfil, carregarStats, carregarReputacao,
+    carregarMeusGrupos, carregarFeed,
     criarGrupo, carregarGrupo, entrarGrupo,
-    registarPagamento, enviarMensagem, avaliar,
+    sairGrupo, removerMembro, convidarMembro, encerrarGrupo,
+    carregarHistorico, registarPagamento, enviarMensagem,
+    avaliar,
+    carregarNotificacoes, marcarNotificacaoLida,
+    carregarLeaderboard,
     reputacaoTexto, reputacaoEstrelas, formatarValor
   };
 })();
