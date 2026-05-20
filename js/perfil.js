@@ -18,7 +18,6 @@ function carregarDadosPerfil() {
 
   document.getElementById('statAvaliacoes').textContent = (perfil.avaliacoes || []).length;
 
-  // Foto de perfil
   const img   = document.getElementById('perfilFotoImg');
   const letra = document.getElementById('perfilFotoLetra');
   if (perfil.foto_perfil) {
@@ -31,26 +30,32 @@ function carregarDadosPerfil() {
     img.style.display   = 'none';
   }
 
-  // Grupos (contar via API)
   KixikilaManager.carregarMeusGrupos()
-    .then(grupos => {
-      document.getElementById('statGrupos').textContent = grupos.length;
-    })
+    .then(grupos => { document.getElementById('statGrupos').textContent = grupos.length; })
     .catch(() => {});
 }
 
-function previewFotoPerfil(evento) {
+function previewFoto(origem, evento) {
   const ficheiro = evento.target.files[0];
   if (!ficheiro) return;
   const leitor = new FileReader();
   leitor.onload = (e) => {
-    const src   = e.target.result;
-    const img   = document.getElementById('perfilFotoImg');
-    const letra = document.getElementById('perfilFotoLetra');
-    img.src             = src;
-    img.style.display   = 'block';
-    letra.style.display = 'none';
-    window._fotoPerfilTemp = src;
+    const src = e.target.result;
+    if (origem === 'Registo') {
+      const img         = document.getElementById('previewFotoRegisto');
+      const placeholder = document.getElementById('fotoPlaceholderRegisto');
+      img.src           = src;
+      img.style.display = 'block';
+      if (placeholder) placeholder.style.display = 'none';
+      window._fotoTemp = src;
+    } else {
+      const img   = document.getElementById('perfilFotoImg');
+      const letra = document.getElementById('perfilFotoLetra');
+      img.src             = src;
+      img.style.display   = 'block';
+      letra.style.display = 'none';
+      window._fotoPerfilTemp = src;
+    }
   };
   leitor.readAsDataURL(ficheiro);
 }
@@ -58,7 +63,6 @@ function previewFotoPerfil(evento) {
 async function guardarPerfil() {
   const nome  = document.getElementById('editNome').value.trim();
   const senha = document.getElementById('editSenha').value.trim();
-
   if (!nome) { mostrarModal('Campo obrigatório', 'O nome não pode estar vazio.'); return; }
 
   const perfil     = KixikilaManager.getSessao()?.perfil;
@@ -66,12 +70,11 @@ async function guardarPerfil() {
 
   try {
     await KixikilaManager.atualizarPerfil({
-      telefone:    perfil.telefone,
-      nome,
-      genero:      perfil.genero || 'M',
-      cor:         perfil.cor    || '#8B0000',
+      telefone: perfil.telefone, nome,
+      genero:   perfil.genero || 'M',
+      cor:      perfil.cor    || '#8B0000',
       foto_perfil,
-      senha:       senha || undefined
+      senha:    senha || undefined
     });
     window._fotoPerfilTemp = null;
     mostrarToast('Perfil actualizado!');
