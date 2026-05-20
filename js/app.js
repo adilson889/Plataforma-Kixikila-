@@ -1,16 +1,36 @@
-var _paginaAnterior  = '';
+var _paginaAnterior    = '';
 var _estrelasAvaliacao = 0;
 
 function mostrarPagina(nome) {
-  _paginaAnterior = document.querySelector('.pagina:not([style*="display:none"])')?.id?.replace('pagina', '') || '';
+  _paginaAnterior = document.querySelector('.pagina:not([style*="display:none"])')?.id?.replace('pagina','') || '';
   document.querySelectorAll('.pagina').forEach(p => p.style.display = 'none');
   const pagina = document.getElementById('pagina' + nome);
   if (pagina) pagina.style.display = 'flex';
   lucide.createIcons();
   if (nome === 'Dashboard') carregarDashboard();
+  // Guardar página actual para o Back do Android
+  history.pushState({ pagina: nome }, '', '#' + nome);
 }
 
 function voltarDashboard() { mostrarPagina('Dashboard'); }
+
+// Back nativo do Android
+window.addEventListener('popstate', (e) => {
+  const pagina = e.state?.pagina;
+  if (!pagina || pagina === 'Auth') {
+    const sessao = KixikilaManager.getSessao();
+    if (sessao) {
+      mostrarPagina('Dashboard');
+    } else {
+      mostrarPagina('Auth');
+    }
+  } else {
+    document.querySelectorAll('.pagina').forEach(p => p.style.display = 'none');
+    const el = document.getElementById('pagina' + pagina);
+    if (el) el.style.display = 'flex';
+    lucide.createIcons();
+  }
+});
 
 function mostrarModal(titulo, mensagem, onOk) {
   document.getElementById('modalTitulo').textContent   = titulo;
@@ -52,7 +72,7 @@ function mostrarModalConfirmar(titulo, mensagem, onConfirmar, txtConfirmar, onCo
     btnExtra.style.marginTop = '8px';
     btnExtra.style.width     = '100%';
     btnExtra.onclick         = () => { fecharModal(); onConfirmar2(); };
-    btns.after(btnExtra);
+    document.getElementById('modalBtns').after(btnExtra);
   }
 
   document.getElementById('modal').style.display = 'flex';
@@ -70,6 +90,15 @@ function mostrarToast(mensagem) {
 }
 
 (function init() {
+  // Tentar restaurar sessão do sessionStorage
+  try {
+    const guardado = sessionStorage.getItem('kx_sessao');
+    if (guardado) {
+      KixikilaManager.setSessao(JSON.parse(guardado));
+      mostrarPagina('Dashboard');
+      return;
+    }
+  } catch (_) {}
   mostrarPagina('Auth');
   lucide.createIcons();
 })();
