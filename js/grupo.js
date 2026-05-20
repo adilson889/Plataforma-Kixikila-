@@ -30,6 +30,8 @@ async function carregarVerGrupo(codigo) {
       const eProprio = m.telefone === perfil?.telefone;
       const div      = document.createElement('div');
       div.className  = 'membro-card' + (eAtual ? ' atual' : '') + (eProprio ? ' proprio' : '');
+      div.style.cursor = 'pointer';
+      div.onclick    = () => abrirPerfilMembro(m.telefone);
       div.innerHTML  = `
         <div class="membro-avatar">${m.nome[0].toUpperCase()}</div>
         <div class="membro-info">
@@ -126,50 +128,6 @@ async function enviarMensagem() {
 }
 
 function abrirMembrosChat() { voltarGrupo(); }
-
-function abrirAvaliacao() {
-  KixikilaManager.carregarGrupo(_codigoGrupoAtual).then(grupo => {
-    const perfil = KixikilaManager.getSessao()?.perfil;
-    const outros = grupo.membros.filter(m => m.telefone !== perfil?.telefone);
-    if (!outros.length) { mostrarModal('Sem membros', 'Não há outros membros para avaliar.'); return; }
-
-    const sel = document.getElementById('selMembro');
-    sel.innerHTML = outros.map(m => `<option value="${m.telefone}">${m.nome}</option>`).join('');
-
-    _estrelasAvaliacao = 0;
-    const wrap = document.getElementById('estrelasWrap');
-    wrap.innerHTML = '';
-    [1,2,3,4,5].forEach(n => {
-      const btn       = document.createElement('button');
-      btn.className   = 'estrela-btn';
-      btn.textContent = '★';
-      btn.onclick     = () => {
-        _estrelasAvaliacao = n;
-        wrap.querySelectorAll('.estrela-btn').forEach((b, i) => b.classList.toggle('on', i < n));
-      };
-      wrap.appendChild(btn);
-    });
-    document.getElementById('modalAvaliacao').style.display = 'flex';
-  });
-}
-
-function fecharModalAvaliacao() {
-  document.getElementById('modalAvaliacao').style.display = 'none';
-}
-
-async function confirmarAvaliacao() {
-  if (!_estrelasAvaliacao) { mostrarToast('Selecciona as estrelas'); return; }
-  const perfil  = KixikilaManager.getSessao()?.perfil;
-  const avaliado = document.getElementById('selMembro').value;
-  fecharModalAvaliacao();
-  try {
-    const rep = await KixikilaManager.avaliar(perfil.telefone, avaliado, _estrelasAvaliacao, '');
-    mostrarModal('Avaliação guardada!',
-      `Reputação: ${KixikilaManager.reputacaoEstrelas(rep)} — ${KixikilaManager.reputacaoTexto(rep)}`);
-  } catch (e) {
-    mostrarModal('Erro', e.message);
-  }
-}
 
 function voltarGrupo() {
   mostrarPagina('VerGrupo');
