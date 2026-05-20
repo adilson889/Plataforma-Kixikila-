@@ -9,8 +9,8 @@
   "theme_color": "#8B0000",
   "lang": "pt",
   "icons": [
-    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
-    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+    { "src": "assets/icons/icon-192.png", "sizes": "192x192", "type": "image/jpg", "purpose": "any maskable" },
+    { "src": "assets/icons/icon-512.jpg", "sizes": "512x512", "type": "image/jpg", "purpose": "any maskable" }
   ],
   "categories": ["finance", "utilities"],
   "shortcuts": [
@@ -18,13 +18,13 @@
       "name": "Criar Grupo",
       "short_name": "Criar",
       "url": "/?acao=criar",
-      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "assets/icons/icon-192.jpg", "sizes": "192x192" }]
     },
     {
       "name": "Entrar num Grupo",
       "short_name": "Entrar",
       "url": "/?acao=entrar",
-      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "assets/icons/icon-192.jpg", "sizes": "192x192" }]
     }
   ]
 }
