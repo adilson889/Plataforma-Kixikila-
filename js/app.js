@@ -17,6 +17,14 @@ function mostrarPagina(nome) {
   if (nome === 'Dashboard') {
     carregarDashboard();
     carregarFeedDashboard();
+    // Inicializar features sociais após carregar dashboard
+    setTimeout(function() {
+      if (typeof carregarStories === 'function') carregarStories();
+      if (typeof carregarTrending === 'function') carregarTrending();
+      if (typeof configurarScrollToTop === 'function') configurarScrollToTop();
+      if (typeof melhorarCardsGrupos === 'function') melhorarCardsGrupos();
+      if (typeof configurarDoubleTapLike === 'function') configurarDoubleTapLike();
+    }, 300);
   }
   history.pushState({ pagina: nome }, '', '#' + nome);
 }
@@ -46,13 +54,24 @@ window.addEventListener('popstate', (e) => {
 
 function mostrarTabDashboard(tab) {
   _tabAtual = tab;
-  document.getElementById('tabDescobrir').classList.toggle('activo', tab === 'descobrir');
-  document.getElementById('tabMeusGrupos').classList.toggle('activo', tab === 'meus');
-  document.getElementById('conteudoDescobrir').style.display = tab === 'descobrir' ? 'block' : 'none';
-  document.getElementById('conteudoMeusGrupos').style.display = tab === 'meus' ? 'block' : 'none';
+  const tabDescobrir = document.getElementById('tabDescobrir');
+  const tabMeusGrupos = document.getElementById('tabMeusGrupos');
+  const conteudoDescobrir = document.getElementById('conteudoDescobrir');
+  const conteudoMeusGrupos = document.getElementById('conteudoMeusGrupos');
+  
+  if (tabDescobrir) tabDescobrir.classList.toggle('activo', tab === 'descobrir');
+  if (tabMeusGrupos) tabMeusGrupos.classList.toggle('activo', tab === 'meus');
+  if (conteudoDescobrir) conteudoDescobrir.style.display = tab === 'descobrir' ? 'block' : 'none';
+  if (conteudoMeusGrupos) conteudoMeusGrupos.style.display = tab === 'meus' ? 'block' : 'none';
   
   if (tab === 'descobrir') carregarFeedDashboard();
   if (tab === 'meus') carregarMeusGruposDashboard();
+  
+  // Re-aplicar melhorias sociais após mudar de tab
+  setTimeout(function() {
+    if (typeof melhorarCardsGrupos === 'function') melhorarCardsGrupos();
+    if (typeof configurarDoubleTapLike === 'function') configurarDoubleTapLike();
+  }, 200);
 }
 
 // ============================================
@@ -64,14 +83,34 @@ function carregarDashboard() {
   if (!sessao) return;
   const perfil = sessao.perfil;
   
+  const saudacao = document.getElementById('dashSaudacao');
+  if (saudacao) {
+    saudacao.textContent = 'Olá, ' + (perfil.nome?.split(' ')[0] || '') + '!';
+  }
+  
+  const dashReputacao = document.getElementById('dashReputacao');
+  if (dashReputacao) {
+    dashReputacao.textContent = perfil.reputacao
+      ? KixikilaManager.reputacaoEstrelas(perfil.reputacao) + '  ' + KixikilaManager.reputacaoTexto(perfil.reputacao)
+      : 'Sem avaliações ainda';
+  }
+  
   if (perfil.foto_perfil) {
-    document.getElementById('navAvatar').src = perfil.foto_perfil;
-    document.getElementById('navAvatar').style.display = 'block';
-    document.getElementById('navAvatarLetra').style.display = 'none';
+    const navAvatar = document.getElementById('navAvatar');
+    if (navAvatar) {
+      navAvatar.src = perfil.foto_perfil;
+      navAvatar.style.display = 'block';
+    }
+    const navAvatarLetra = document.getElementById('navAvatarLetra');
+    if (navAvatarLetra) navAvatarLetra.style.display = 'none';
   } else {
-    document.getElementById('navAvatar').style.display = 'none';
-    document.getElementById('navAvatarLetra').textContent = (perfil.nome || 'U')[0].toUpperCase();
-    document.getElementById('navAvatarLetra').style.display = 'flex';
+    const navAvatar = document.getElementById('navAvatar');
+    if (navAvatar) navAvatar.style.display = 'none';
+    const navAvatarLetra = document.getElementById('navAvatarLetra');
+    if (navAvatarLetra) {
+      navAvatarLetra.textContent = (perfil.nome || 'U')[0].toUpperCase();
+      navAvatarLetra.style.display = 'flex';
+    }
   }
 }
 
@@ -83,6 +122,18 @@ async function carregarFeedDashboard() {
   const container = document.getElementById('feedGrupos');
   if (!container) return;
   
+  // Mostrar skeleton loading
+  container.innerHTML = `
+    <div class="skeleton-feed">
+      <div style="display:flex; gap:12px; margin-bottom:16px;">
+        <div class="skeleton-avatar"></div>
+        <div style="flex:1"><div class="skeleton-line" style="width:60%"></div><div class="skeleton-line" style="width:40%"></div></div>
+      </div>
+      <div class="skeleton-line" style="width:100%"></div>
+      <div class="skeleton-line" style="width:80%"></div>
+    </div>
+  `;
+  
   try {
     const grupos = await KixikilaManager.carregarFeed({ estado: 'aberto', limite: 20 });
     
@@ -92,21 +143,22 @@ async function carregarFeedDashboard() {
     }
     
     container.innerHTML = '';
-    grupos.forEach(grupo => {
+    for (const grupo of grupos) {
       const vagas = grupo.max_membros - grupo.membros.length;
       const card = document.createElement('div');
       card.className = 'feed-grupo-card';
+      card.setAttribute('data-codigo', grupo.codigo);
       card.onclick = () => {
-        _codigoGrupoAtual = grupo.codigo;
+        window._codigoGrupoAtual = grupo.codigo;
         mostrarPagina('VerGrupo');
-        carregarVerGrupo(grupo.codigo);
+        if (typeof carregarVerGrupo === 'function') carregarVerGrupo(grupo.codigo);
       };
       card.innerHTML = `
         <div class="feed-info">
-          <h4>${grupo.nome}</h4>
+          <h4>${escapeHtml(grupo.nome)}</h4>
           <div class="feed-valor">${KixikilaManager.formatarValor(grupo.valor)} KZ / ${grupo.periodicidade}</div>
           <div class="feed-criador">
-            por <span onclick="event.stopPropagation();abrirPerfilMembro('${grupo.criador.telefone}')">${grupo.criador.nome}</span>
+            por <span onclick="event.stopPropagation();abrirPerfilMembro('${escapeHtml(grupo.criador.telefone)}')">${escapeHtml(grupo.criador.nome)}</span>
           </div>
         </div>
         <div class="feed-meta">
@@ -115,8 +167,16 @@ async function carregarFeedDashboard() {
         </div>
       `;
       container.appendChild(card);
-    });
+    }
+    
+    // Aplicar melhorias sociais nos cards
+    setTimeout(function() {
+      if (typeof melhorarCardsGrupos === 'function') melhorarCardsGrupos();
+      if (typeof configurarDoubleTapLike === 'function') configurarDoubleTapLike();
+    }, 100);
+    
   } catch (e) {
+    console.error('Erro ao carregar feed:', e);
     container.innerHTML = '<p style="color:var(--muted);text-align:center;padding:20px;">Erro ao carregar grupos.</p>';
   }
 }
@@ -142,29 +202,38 @@ async function carregarMeusGruposDashboard() {
     if (vazio) vazio.style.display = 'none';
     container.innerHTML = '';
     
-    grupos.forEach(grupo => {
+    for (const grupo of grupos) {
       const pagos = grupo.membros.filter(m => m.pago).length;
       const card = document.createElement('div');
       card.className = 'card-grupo';
+      card.setAttribute('data-codigo', grupo.codigo);
       card.onclick = () => {
-        _codigoGrupoAtual = grupo.codigo;
+        window._codigoGrupoAtual = grupo.codigo;
         mostrarPagina('VerGrupo');
-        carregarVerGrupo(grupo.codigo);
+        if (typeof carregarVerGrupo === 'function') carregarVerGrupo(grupo.codigo);
       };
       card.innerHTML = `
         <div class="card-grupo-info">
-          <h3>${grupo.nome}</h3>
+          <h3>${escapeHtml(grupo.nome)}</h3>
           <div class="valor">${KixikilaManager.formatarValor(grupo.valor)} KZ / ${grupo.periodicidade}</div>
-          <div class="info">${grupo.membros.length} membros &bull; ${pagos} pagaram</div>
+          <div class="info">${grupo.membros.length} membros • ${pagos} pagaram</div>
         </div>
         <div class="card-grupo-seta">
           <i data-lucide="chevron-right"></i>
         </div>
       `;
       container.appendChild(card);
-    });
+    }
     lucide.createIcons();
+    
+    // Aplicar melhorias sociais nos cards
+    setTimeout(function() {
+      if (typeof melhorarCardsGrupos === 'function') melhorarCardsGrupos();
+      if (typeof configurarDoubleTapLike === 'function') configurarDoubleTapLike();
+    }, 100);
+    
   } catch (e) {
+    console.error('Erro ao carregar meus grupos:', e);
     container.innerHTML = '<p style="color:var(--muted);text-align:center;padding:20px;">Erro ao carregar os teus grupos.</p>';
   }
 }
@@ -176,6 +245,8 @@ async function carregarMeusGruposDashboard() {
 async function abrirPerfilMembro(telefone) {
   mostrarPagina('PerfilMembro');
   const container = document.getElementById('perfilMembroConteudo');
+  if (!container) return;
+  
   container.innerHTML = '<p style="text-align:center;padding:40px;color:var(--muted);">A carregar perfil...</p>';
   
   try {
@@ -189,7 +260,7 @@ async function abrirPerfilMembro(telefone) {
           ? `<img src="${perfil.foto_perfil}" class="membro-perfil-foto" alt="Foto">`
           : `<div class="membro-perfil-letra">${(perfil.nome || 'U')[0].toUpperCase()}</div>`
         }
-        <h3 class="membro-perfil-nome">${perfil.nome || 'Utilizador'}</h3>
+        <h3 class="membro-perfil-nome">${escapeHtml(perfil.nome || 'Utilizador')}</h3>
         <p class="membro-perfil-tel">${perfil.telefone || telefone}</p>
         <p class="membro-perfil-rep">${estrelas} ${texto}</p>
       </div>
@@ -208,7 +279,7 @@ async function abrirPerfilMembro(telefone) {
         <canvas id="canvasReputacao" width="300" height="150"></canvas>
       </div>
       <div class="membro-perfil-acoes">
-        <button class="btn-confiar" onclick="abrirAvaliacaoDireta('${telefone}','${perfil.nome}')">
+        <button class="btn-confiar" onclick="abrirAvaliacaoDireta('${telefone}','${escapeHtml(perfil.nome)}')">
           <i data-lucide="star"></i> Avaliar este membro
         </button>
       </div>
@@ -232,7 +303,6 @@ async function abrirPerfilMembro(telefone) {
         
         ctx.clearRect(0, 0, w, h);
         
-        // Linha
         ctx.beginPath();
         ctx.strokeStyle = '#8B0000';
         ctx.lineWidth = 2.5;
@@ -244,7 +314,6 @@ async function abrirPerfilMembro(telefone) {
         });
         ctx.stroke();
         
-        // Pontos
         pontos.forEach((v, i) => {
           const x = 30 + (w - 60) * i / (pontos.length - 1);
           const y = h - 20 - (h - 40) * (v / 5);
@@ -265,6 +334,7 @@ async function abrirPerfilMembro(telefone) {
     }, 300);
 
   } catch (e) {
+    console.error('Erro ao carregar perfil:', e);
     container.innerHTML = '<p style="text-align:center;padding:40px;color:var(--muted);">Erro ao carregar perfil.</p>';
   }
 }
@@ -276,10 +346,13 @@ async function abrirPerfilMembro(telefone) {
 function abrirAvaliacaoDireta(telefone, nome) {
   _telefoneAvaliacaoDireta = telefone;
   _nomeAvaliacaoDireta = nome;
-  document.getElementById('avalDiretaNome').textContent = nome;
+  const avalNome = document.getElementById('avalDiretaNome');
+  if (avalNome) avalNome.textContent = nome;
   
   _estrelasAvaliacao = 0;
   const wrap = document.getElementById('estrelasWrapDireta');
+  if (!wrap) return;
+  
   wrap.innerHTML = '';
   for (let i = 1; i <= 5; i++) {
     const btn = document.createElement('button');
@@ -294,20 +367,28 @@ function abrirAvaliacaoDireta(telefone, nome) {
     wrap.appendChild(btn);
   }
   
-  document.getElementById('overlayAvaliacaoDireta').style.display = 'flex';
+  const overlay = document.getElementById('overlayAvaliacaoDireta');
+  if (overlay) overlay.style.display = 'flex';
 }
 
 function fecharAvaliacaoDireta() {
-  document.getElementById('overlayAvaliacaoDireta').style.display = 'none';
+  const overlay = document.getElementById('overlayAvaliacaoDireta');
+  if (overlay) overlay.style.display = 'none';
   _estrelasAvaliacao = 0;
+  const comentario = document.getElementById('comentarioAvaliacao');
+  if (comentario) comentario.value = '';
 }
 
 async function confirmarAvaliacaoDireta() {
-  if (_estrelasAvaliacao === 0) return;
-  const perfil = KixikilaManager.getSessao()?.perfil;
+  if (_estrelasAvaliacao === 0) {
+    mostrarToast('Seleccione uma classificação');
+    return;
+  }
+  const sessao = KixikilaManager.getSessao();
+  const perfil = sessao?.perfil;
   if (!perfil) return;
   
-  const comentario = document.getElementById('comentarioAvaliacao').value.trim();
+  const comentario = document.getElementById('comentarioAvaliacao')?.value.trim() || '';
   
   try {
     await KixikilaManager.avaliar(perfil.telefone, _telefoneAvaliacaoDireta, _estrelasAvaliacao, comentario);
@@ -324,78 +405,110 @@ async function confirmarAvaliacaoDireta() {
 // ============================================
 
 function mostrarModal(titulo, mensagem, onOk) {
-  document.getElementById('modalTitulo').textContent   = titulo;
-  document.getElementById('modalMensagem').textContent = mensagem;
-  const btns = document.getElementById('modalBtns');
-  btns.innerHTML = '';
-  const btnOk       = document.createElement('button');
-  btnOk.className   = 'btn-primary';
-  btnOk.textContent = 'OK';
-  btnOk.style.flex  = '1';
-  btnOk.onclick     = () => { fecharModal(); if (onOk) onOk(); };
-  btns.appendChild(btnOk);
-  document.getElementById('modal').style.display = 'flex';
+  const modalTitulo = document.getElementById('modalTitulo');
+  const modalMensagem = document.getElementById('modalMensagem');
+  const modalBtns = document.getElementById('modalBtns');
+  const modal = document.getElementById('modal');
+  
+  if (modalTitulo) modalTitulo.textContent = titulo;
+  if (modalMensagem) modalMensagem.textContent = mensagem;
+  if (modalBtns) {
+    modalBtns.innerHTML = '';
+    const btnOk = document.createElement('button');
+    btnOk.className = 'btn-primary';
+    btnOk.textContent = 'OK';
+    btnOk.style.flex = '1';
+    btnOk.onclick = () => { fecharModal(); if (onOk) onOk(); };
+    modalBtns.appendChild(btnOk);
+  }
+  if (modal) modal.style.display = 'flex';
 }
 
-function mostrarModalConfirmar(titulo, mensagem, onConfirmar, txtConfirmar) {
-  document.getElementById('modalTitulo').textContent   = titulo;
-  document.getElementById('modalMensagem').textContent = mensagem;
-  const btns = document.getElementById('modalBtns');
-  btns.innerHTML = '';
-
-  const btnCancelar       = document.createElement('button');
-  btnCancelar.className   = 'btn-outline';
-  btnCancelar.textContent = 'Cancelar';
-  btnCancelar.onclick     = fecharModal;
-
-  const btnOk       = document.createElement('button');
-  btnOk.className   = 'btn-primary';
-  btnOk.textContent = txtConfirmar || 'Confirmar';
-  btnOk.onclick     = () => { fecharModal(); onConfirmar(); };
-
-  btns.appendChild(btnCancelar);
-  btns.appendChild(btnOk);
-  document.getElementById('modal').style.display = 'flex';
+function mostrarModalConfirmar(titulo, mensagem, onConfirmar, txtBotao, onAlternativo) {
+  const modalTitulo = document.getElementById('modalTitulo');
+  const modalMensagem = document.getElementById('modalMensagem');
+  const modalBtns = document.getElementById('modalBtns');
+  const modal = document.getElementById('modal');
+  
+  if (modalTitulo) modalTitulo.textContent = titulo;
+  if (modalMensagem) modalMensagem.textContent = mensagem;
+  
+  if (modalBtns) {
+    modalBtns.innerHTML = '';
+    
+    const btnCancelar = document.createElement('button');
+    btnCancelar.className = 'btn-outline';
+    btnCancelar.textContent = 'Cancelar';
+    btnCancelar.onclick = fecharModal;
+    
+    const btnOk = document.createElement('button');
+    btnOk.className = 'btn-primary';
+    btnOk.textContent = txtBotao || 'Confirmar';
+    btnOk.onclick = () => { fecharModal(); if (onConfirmar) onConfirmar(); };
+    
+    modalBtns.appendChild(btnCancelar);
+    modalBtns.appendChild(btnOk);
+    
+    if (onAlternativo) {
+      const btnAlt = document.createElement('button');
+      btnAlt.className = 'btn-outline';
+      btnAlt.textContent = txtBotao || 'Confirmar';
+      btnAlt.onclick = () => { fecharModal(); if (onAlternativo) onAlternativo(); };
+      modalBtns.appendChild(btnAlt);
+    }
+  }
+  if (modal) modal.style.display = 'flex';
 }
 
 function mostrarModalComInput(titulo, mensagem, tipo, onConfirmar) {
-  document.getElementById('modalTitulo').textContent = titulo;
-  document.getElementById('modalMensagem').innerHTML = `
-    ${mensagem}
-    <input type="${tipo}" id="modalInput" placeholder="A tua senha" 
-           style="width:100%;padding:12px;border:1.5px solid var(--border);border-radius:10px;font-size:.95rem;margin-top:12px;">
-  `;
+  const modalTitulo = document.getElementById('modalTitulo');
+  const modalMensagem = document.getElementById('modalMensagem');
+  const modalBtns = document.getElementById('modalBtns');
+  const modal = document.getElementById('modal');
   
-  const btns = document.getElementById('modalBtns');
-  btns.innerHTML = '';
+  if (modalTitulo) modalTitulo.textContent = titulo;
+  if (modalMensagem) {
+    modalMensagem.innerHTML = `
+      ${mensagem}
+      <input type="${tipo}" id="modalInput" placeholder="A tua senha" 
+             style="width:100%;padding:12px;border:1.5px solid var(--border);border-radius:10px;font-size:.95rem;margin-top:12px;">
+    `;
+  }
   
-  const btnCancelar = document.createElement('button');
-  btnCancelar.className = 'btn-outline';
-  btnCancelar.textContent = 'Cancelar';
-  btnCancelar.onclick = fecharModal;
-  
-  const btnOk = document.createElement('button');
-  btnOk.className = 'btn-primary';
-  btnOk.textContent = 'Eliminar';
-  btnOk.style.background = 'var(--r2)';
-  btnOk.onclick = () => {
-    const valor = document.getElementById('modalInput').value;
-    if (!valor) return;
-    fecharModal();
-    onConfirmar(valor);
-  };
-  
-  btns.appendChild(btnCancelar);
-  btns.appendChild(btnOk);
-  document.getElementById('modal').style.display = 'flex';
+  if (modalBtns) {
+    modalBtns.innerHTML = '';
+    
+    const btnCancelar = document.createElement('button');
+    btnCancelar.className = 'btn-outline';
+    btnCancelar.textContent = 'Cancelar';
+    btnCancelar.onclick = fecharModal;
+    
+    const btnOk = document.createElement('button');
+    btnOk.className = 'btn-primary';
+    btnOk.textContent = 'Eliminar';
+    btnOk.style.background = 'var(--r2)';
+    btnOk.onclick = () => {
+      const input = document.getElementById('modalInput');
+      const valor = input?.value;
+      if (!valor) return;
+      fecharModal();
+      if (onConfirmar) onConfirmar(valor);
+    };
+    
+    modalBtns.appendChild(btnCancelar);
+    modalBtns.appendChild(btnOk);
+  }
+  if (modal) modal.style.display = 'flex';
 }
 
 function fecharModal() {
-  document.getElementById('modal').style.display = 'none';
+  const modal = document.getElementById('modal');
+  if (modal) modal.style.display = 'none';
 }
 
 function mostrarToast(mensagem) {
-  const toast       = document.getElementById('toast');
+  const toast = document.getElementById('toast');
+  if (!toast) return;
   toast.textContent = mensagem;
   toast.classList.add('show');
   setTimeout(() => toast.classList.remove('show'), 2800);
@@ -411,32 +524,46 @@ function abrirPerfil() {
 }
 
 function carregarMeuPerfil() {
-  const perfil = KixikilaManager.getSessao()?.perfil;
+  const sessao = KixikilaManager.getSessao();
+  const perfil = sessao?.perfil;
   if (!perfil) return;
   
-  document.getElementById('perfilNome').textContent = perfil.nome || 'Utilizador';
-  document.getElementById('perfilTelefone').textContent = perfil.telefone || '';
-  document.getElementById('perfilReputacao').textContent = KixikilaManager.reputacaoEstrelas(perfil.reputacao || 0);
-  document.getElementById('editNome').value = perfil.nome || '';
+  const perfilNome = document.getElementById('perfilNome');
+  const perfilTelefone = document.getElementById('perfilTelefone');
+  const perfilReputacao = document.getElementById('perfilReputacao');
+  const editNome = document.getElementById('editNome');
+  const perfilFotoImg = document.getElementById('perfilFotoImg');
+  const perfilFotoLetra = document.getElementById('perfilFotoLetra');
   
-  if (perfil.foto_perfil) {
-    document.getElementById('perfilFotoImg').src = perfil.foto_perfil;
-    document.getElementById('perfilFotoImg').style.display = 'block';
-    document.getElementById('perfilFotoLetra').style.display = 'none';
+  if (perfilNome) perfilNome.textContent = perfil.nome || 'Utilizador';
+  if (perfilTelefone) perfilTelefone.textContent = perfil.telefone || '';
+  if (perfilReputacao) perfilReputacao.textContent = KixikilaManager.reputacaoEstrelas(perfil.reputacao || 0);
+  if (editNome) editNome.value = perfil.nome || '';
+  
+  if (perfil.foto_perfil && perfilFotoImg) {
+    perfilFotoImg.src = perfil.foto_perfil;
+    perfilFotoImg.style.display = 'block';
+    if (perfilFotoLetra) perfilFotoLetra.style.display = 'none';
+  } else if (perfilFotoLetra) {
+    perfilFotoLetra.textContent = (perfil.nome?.[0] || 'K').toUpperCase();
+    perfilFotoLetra.style.display = 'flex';
   }
   
   KixikilaManager.carregarStats(perfil.telefone).then(stats => {
-    document.getElementById('statGrupos').textContent = stats.grupos_activos || 0;
-    document.getElementById('statAvaliacoes').textContent = stats.total_avaliacoes || 0;
+    const statGrupos = document.getElementById('statGrupos');
+    const statAvaliacoes = document.getElementById('statAvaliacoes');
+    if (statGrupos) statGrupos.textContent = stats.grupos_activos || 0;
+    if (statAvaliacoes) statAvaliacoes.textContent = stats.total_avaliacoes || 0;
   }).catch(() => {});
 }
 
 async function guardarPerfil() {
-  const perfil = KixikilaManager.getSessao()?.perfil;
+  const sessao = KixikilaManager.getSessao();
+  const perfil = sessao?.perfil;
   if (!perfil) return;
   
-  const nome = document.getElementById('editNome').value.trim();
-  const senha = document.getElementById('editSenha').value.trim();
+  const nome = document.getElementById('editNome')?.value.trim() || '';
+  const senha = document.getElementById('editSenha')?.value.trim() || '';
   
   if (!nome) { mostrarToast('O nome é obrigatório.'); return; }
   
@@ -448,6 +575,8 @@ async function guardarPerfil() {
     });
     KixikilaManager.setSessao(atualizado);
     mostrarToast('Perfil atualizado!');
+    carregarMeuPerfil();
+    carregarDashboard();
   } catch (e) {
     mostrarToast(e.message);
   }
@@ -463,13 +592,14 @@ function logout() {
 // ============================================
 
 async function confirmarEliminarConta() {
-  const perfil = KixikilaManager.getSessao()?.perfil;
+  const sessao = KixikilaManager.getSessao();
+  const perfil = sessao?.perfil;
   if (!perfil) return;
 
   try {
     const stats = await KixikilaManager.carregarStats(perfil.telefone);
     if (stats.grupos_activos > 0) {
-      mostrarModal('Não é possível eliminar', `Ainda fazes parte de ${stats.grupos_activos} grupo(s). Sai de todos os grupos antes de eliminar a conta.`);
+      mostrarModal('Não é possível eliminar', 'Ainda fazes parte de ' + stats.grupos_activos + ' grupo(s). Sai de todos os grupos antes de eliminar a conta.');
       return;
     }
   } catch (e) {}
@@ -492,11 +622,27 @@ async function confirmarEliminarConta() {
 // ============================================
 
 function mostrarTab(tab) {
-  document.getElementById('tabRegisto').style.display = tab === 'registo' ? 'block' : 'none';
-  document.getElementById('tabLogin').style.display = tab === 'login' ? 'block' : 'none';
-  document.querySelectorAll('.auth-tab').forEach((b, i) => {
+  const tabRegisto = document.getElementById('tabRegisto');
+  const tabLogin = document.getElementById('tabLogin');
+  const authTabs = document.querySelectorAll('.auth-tab');
+  
+  if (tabRegisto) tabRegisto.style.display = tab === 'registo' ? 'block' : 'none';
+  if (tabLogin) tabLogin.style.display = tab === 'login' ? 'block' : 'none';
+  
+  authTabs.forEach((b, i) => {
     b.classList.toggle('activo', (i === 0 && tab === 'registo') || (i === 1 && tab === 'login'));
   });
+}
+
+// ============================================
+// UTILITÁRIOS
+// ============================================
+
+function escapeHtml(text) {
+  if (!text) return '';
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
 }
 
 // ============================================
@@ -507,7 +653,8 @@ function mostrarTab(tab) {
   try {
     const guardado = sessionStorage.getItem('kx_sessao');
     if (guardado) {
-      KixikilaManager.setSessao(JSON.parse(guardado));
+      const perfil = JSON.parse(guardado);
+      KixikilaManager.setSessao(perfil);
       mostrarPagina('Dashboard');
       return;
     }
