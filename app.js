@@ -226,7 +226,7 @@ function logout() {
     { texto: 'Sair', classe: 'btn-primary', acao: () => {
       pararSync();
       KixikilaManager.limparSessao();
-      fecharModal('modalPerfil');
+      fecharModal('modalPerfil'); restaurarBotoesPerfilModal();
       irPara('paginaAuth');
     }}
   ]);
@@ -488,39 +488,73 @@ function renderRodas(grupo) {
 }
 
 // ── PERFIL MEMBRO ────────────────────────────────────────────
-function abrirPerfilMembro(m) {
+async function abrirPerfilMembro(m) {
   _membroAtual = m;
-  const fotoEl = document.getElementById('membroFotoGrande');
-  if (m.foto_perfil && m.foto_perfil !== '') {
-    fotoEl.style.backgroundImage = `url(${m.foto_perfil})`;
-    fotoEl.style.backgroundSize = 'cover';
-    fotoEl.style.backgroundPosition = 'center';
-    fotoEl.innerHTML = '';
-  } else {
-    fotoEl.style.backgroundImage = '';
-    fotoEl.innerHTML = `<span class="membro-foto-letra">${(m.nome?.[0]||'?').toUpperCase()}</span>`;
+  const euTel  = KixikilaManager.getSessao()?.perfil?.telefone;
+  const eProprio = m.telefone?.replace(/\D/g,'') === euTel?.replace(/\D/g,'');
+
+  // Reutilizar o mesmo modal do perfil principal
+  // Esconder/mostrar controlos consoante é o próprio ou outro
+  const btnEditar   = document.getElementById('perfilBtnEditar');
+  const btnSair     = document.getElementById('perfilBtnSair');
+  const btnEliminar = document.getElementById('perfilBtnEliminar');
+  const secaoEditar = document.getElementById('perfilSecaoEditar');
+  const btnAvaliar  = document.getElementById('perfilBtnAvaliar');
+
+  if (!eProprio) {
+    if (btnEditar)   btnEditar.style.display   = 'none';
+    if (btnSair)     btnSair.style.display     = 'none';
+    if (btnEliminar) btnEliminar.style.display = 'none';
+    if (secaoEditar) secaoEditar.style.display = 'none';
+    if (btnAvaliar)  btnAvaliar.style.display  = 'flex';
   }
-  document.getElementById('membroPerfilNome').textContent = m.nome || '';
-  document.getElementById('membroPerfilTel').textContent = m.telefone || '';
-  const campo = (label, val) => val ? `
-    <div style="display:flex;flex-direction:column;gap:1px">
-      <span style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)">${label}</span>
-      <span style="color:var(--text);font-weight:500">${esc(val)}</span>
-    </div>` : '';
-  document.getElementById('membroInfoExtra').innerHTML = [
-    campo('Email',             m.email),
-    campo('Telefone',          m.telefone),
-    campo('Província',         m.provincia),
-    campo('Município',         m.municipio),
-    campo('Data de nascimento',m.data_nasc),
-  ].join('');
-  document.getElementById('membroStars').innerHTML = renderEstrelas(m.reputacao || 0, m.total_avaliacoes)
-    + `<div style="font-size:.72rem;color:var(--muted);margin-top:2px">${m.total_avaliacoes ? m.total_avaliacoes + ' aval.' : 'Sem aval.'}</div>`;
-  const perfil = KixikilaManager.getSessao()?.perfil;
-  const eProprio = m.telefone === perfil?.telefone;
-  const btnAvaliar = document.querySelector('#modalMembroPerfil .btn-primary');
-  if (btnAvaliar) btnAvaliar.style.display = eProprio ? 'none' : 'block';
-  document.getElementById('modalMembroPerfil').style.display = 'flex';
+
+  // Preencher com dados básicos imediatamente (do objeto do grupo)
+  const av = document.getElementById('perfilAvatarModal');
+  av.dataset.novaFoto = '';
+  av.onclick = () => m.foto_perfil ? abrirFotoPreview(m.foto_perfil) : null;
+  if (m.foto_perfil) {
+    av.style.backgroundImage = `url(${m.foto_perfil})`;
+    av.style.backgroundSize  = 'cover';
+    av.style.backgroundPosition = 'center';
+    av.textContent = '';
+  } else {
+    av.style.backgroundImage = '';
+    av.textContent = (m.nome?.[0]||'?').toUpperCase();
+  }
+  document.getElementById('perfilNomeModal').textContent    = m.nome     || '';
+  document.getElementById('perfilTelModal').textContent     = m.telefone || '';
+  document.getElementById('perfilEmail').textContent        = '...';
+  document.getElementById('perfilDataNasc').textContent     = '...';
+  document.getElementById('perfilProvincia').textContent    = '...';
+  document.getElementById('perfilMunicipio').textContent    = '...';
+  document.getElementById('modalPerfil').style.display = 'flex';
+
+  // Fetch completo em background
+  try {
+    const dados = await KixikilaManager.carregarReputacao(m.telefone);
+    document.getElementById('perfilEmail').textContent     = dados.email     || 'Não definido';
+    document.getElementById('perfilDataNasc').textContent  = dados.data_nasc || 'Não definido';
+    document.getElementById('perfilProvincia').textContent = dados.provincia  || 'Não definido';
+    document.getElementById('perfilMunicipio').textContent = dados.municipio  || 'Não definido';
+    if (dados.foto_perfil && !m.foto_perfil) {
+      av.style.backgroundImage = `url(${dados.foto_perfil})`;
+      av.style.backgroundSize  = 'cover';
+      av.textContent = '';
+      av.onclick = () => abrirFotoPreview(dados.foto_perfil);
+    }
+  } catch {}
+}
+
+function abrirFotoPreview(src) {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.92);display:flex;align-items:center;justify-content:center;cursor:pointer';
+  overlay.onclick = () => overlay.remove();
+  const img = document.createElement('img');
+  img.src = src;
+  img.style.cssText = 'max-width:100%;max-height:100%;object-fit:contain;border-radius:8px';
+  overlay.appendChild(img);
+  document.body.appendChild(overlay);
 }
 
 // ── AVALIAR MEMBRO ───────────────────────────────────────────
@@ -713,7 +747,17 @@ async function encerrarGrupo() {
 }
 
 // ── PERFIL (O MEU) ───────────────────────────────────────────
+function restaurarBotoesPerfilModal() {
+  const ids = ['perfilBtnEditar','perfilBtnSair','perfilBtnEliminar','perfilSecaoEditar'];
+  ids.forEach(id => { const el = document.getElementById(id); if (el) el.style.display = ''; });
+  const btnAvaliar = document.getElementById('perfilBtnAvaliar');
+  if (btnAvaliar) btnAvaliar.style.display = 'none';
+  const av = document.getElementById('perfilAvatarModal');
+  if (av) av.onclick = null;
+}
+
 function abrirPerfil() {
+  restaurarBotoesPerfilModal();
   const perfil = KixikilaManager.getSessao()?.perfil;
   if (!perfil) return;
   const av = document.getElementById('perfilAvatarModal');
@@ -748,14 +792,14 @@ async function guardarPerfil() {
   if (!nome) { toast('O nome e obrigatorio'); return; }
   try {
     await KixikilaManager.atualizarPerfil({ telefone: perfil.telefone, nome, foto_perfil: novaFoto, senha: senha || undefined });
-    fecharModal('modalPerfil');
+    fecharModal('modalPerfil'); restaurarBotoesPerfilModal();
     atualizarAvatar();
     toast('Perfil actualizado!');
   } catch (e) { toast(e.message); }
 }
 
 async function confirmarEliminarConta() {
-  fecharModal('modalPerfil');
+  fecharModal('modalPerfil'); restaurarBotoesPerfilModal();
   modal('Eliminar conta', 'Esta accao e irreversivel. Tens a certeza?', [
     { texto: 'Cancelar', classe: 'btn-outline' },
     { texto: 'Eliminar', classe: 'btn-primary', acao: async () => {
