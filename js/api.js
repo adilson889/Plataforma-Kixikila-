@@ -23,7 +23,6 @@ const KixikilaManager = (() => {
         const r     = await fetch(url, opcoes);
         const dados = await r.json();
         if (r.status === 429) {
-          // rate limit — espera e tenta de novo
           await new Promise(res => setTimeout(res, 2000 * (i + 1)));
           continue;
         }
@@ -101,9 +100,9 @@ const KixikilaManager = (() => {
 
   async function carregarFeed({ estado, periodicidade, limite } = {}) {
     const params = new URLSearchParams();
-    if (estado)        params.set('estado', estado);
+    if (estado) params.set('estado', estado);
     if (periodicidade) params.set('periodicidade', periodicidade);
-    if (limite)        params.set('limite', String(limite));
+    if (limite) params.set('limite', String(limite));
     const dados = await get('grupos?' + params.toString());
     return dados.grupos || [];
   }
@@ -152,6 +151,30 @@ const KixikilaManager = (() => {
 
   async function enviarMensagem(codigo, telefone, nome, texto) {
     return post(`grupo/${codigo}/mensagem`, { telefone, nome, texto });
+  }
+
+  // ── COMENTÁRIOS PÚBLICOS (feed) ─────────────────────────────
+  async function carregarComentarios(codigo) {
+    const dados = await get(`grupo/${codigo}/comentarios`);
+    return dados.comentarios || [];
+  }
+
+  async function adicionarComentario(codigo, telefone, nome, texto) {
+    return post(`grupo/${codigo}/comentario`, { telefone, nome, texto });
+  }
+
+  // ── LIKES ───────────────────────────────────────────────────
+  async function darLike(codigo, telefone) {
+    return post(`grupo/${codigo}/like`, { telefone });
+  }
+
+  async function removerLike(codigo, telefone) {
+    return post(`grupo/${codigo}/unlike`, { telefone });
+  }
+
+  async function carregarLikes(codigo) {
+    const dados = await get(`grupo/${codigo}/likes`);
+    return { likes: dados.likes || [], total: dados.total || 0 };
   }
 
   // ── AVALIACAO ────────────────────────────────────────────────
@@ -207,9 +230,11 @@ const KixikilaManager = (() => {
     criarGrupo, carregarGrupo, entrarGrupo,
     sairGrupo, removerMembro, convidarMembro, encerrarGrupo,
     carregarHistorico, registarPagamento, enviarMensagem,
+    carregarComentarios, adicionarComentario,
+    darLike, removerLike, carregarLikes,
     avaliar,
     carregarNotificacoes, marcarNotificacaoLida,
     carregarLeaderboard,
     reputacaoTexto, reputacaoEstrelas, formatarValor
   };
-})(); 
+})();
