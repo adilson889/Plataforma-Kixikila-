@@ -71,20 +71,6 @@ function renderEstrelas(valor, total) {
   ).join('') + (total ? `<small style="color:var(--muted);margin-left:6px">(${total})</small>` : '');
 }
 
-function renderAvatar(element, foto, nome, altura = '100%') {
-  if (!element) return;
-  if (foto && foto !== '') {
-    element.style.backgroundImage = `url(${foto})`;
-    element.style.backgroundSize = 'cover';
-    element.style.backgroundPosition = 'center';
-    element.style.height = altura;
-    element.textContent = '';
-  } else {
-    element.style.backgroundImage = '';
-    element.textContent = (nome?.[0] || '?').toUpperCase();
-  }
-}
-
 function comprimirImagem(ficheiro, maxDim = 800, q = 0.85) {
   return new Promise((res, rej) => {
     if (!ficheiro?.type.startsWith('image/')) { rej(new Error('Invalido')); return; }
@@ -131,7 +117,10 @@ async function previewFotoPerfil(evento) {
   try {
     const src = await comprimirImagem(f);
     const av   = document.getElementById('perfilAvatarModal');
-    renderAvatar(av, src, '');
+    av.style.backgroundImage    = `url(${src})`;
+    av.style.backgroundSize     = 'cover';
+    av.style.backgroundPosition = 'center';
+    av.textContent = '';
     av.dataset.novaFoto = src;
   } catch { toast('Erro ao processar imagem'); }
 }
@@ -255,7 +244,15 @@ function atualizarAvatar() {
   if (!perfil) return;
   const av = document.getElementById('topAvatar');
   if (!av) return;
-  renderAvatar(av, perfil.foto_perfil, perfil.nome);
+  if (perfil.foto_perfil) {
+    av.style.backgroundImage    = `url(${perfil.foto_perfil})`;
+    av.style.backgroundSize     = 'cover';
+    av.style.backgroundPosition = 'center';
+    av.textContent = '';
+  } else {
+    av.style.backgroundImage = '';
+    av.textContent = (perfil.nome?.[0] || 'K').toUpperCase();
+  }
 }
 
 function mostrarTabMain(tab) {
@@ -463,21 +460,12 @@ function renderMembros(grupo, perfil) {
     const div = document.createElement('div');
     div.className = 'membro-item';
     div.onclick   = () => abrirPerfilMembro(m);
-    
-    const avatarDiv = document.createElement('div');
-    avatarDiv.className = 'membro-av' + (eAtual ? ' atual' : '');
-    renderAvatar(avatarDiv, m.foto_perfil, m.nome);
-    
     div.innerHTML = `
-      <div class="membro-info">
-        <div class="membro-nome">${esc(m.nome)}${eProprio ? ' <small style="color:var(--r)">(tu)</small>' : ''}</div>
-        <div class="membro-tel">${esc(m.telefone)}</div>
+      <div class="membro-av${eAtual?' atual':''}" style="background-image:${m.foto_perfil ? `url('${esc(m.foto_perfil)}')` : 'none'};background-size:cover;background-position:center">
+        ${!m.foto_perfil ? (m.nome?.[0]||'?').toUpperCase() : ''}
       </div>
-      <span class="status ${m.pago?'status-pago':eAtual?'status-recebe':'status-pendente'}">
-        ${m.pago ? 'PAGO' : eAtual ? 'RECEBE' : 'PENDENTE'}
-      </span>`;
-    
-    div.insertBefore(avatarDiv, div.firstChild);
+      <div class="membro-info"><div class="membro-nome">${esc(m.nome)}${eProprio ? ' <small style="color:var(--r)">(tu)</small>' : ''}</div><div class="membro-tel">${esc(m.telefone)}</div></div>
+      <span class="status ${m.pago?'status-pago':eAtual?'status-recebe':'status-pendente'}">${m.pago ? 'PAGO' : eAtual ? 'RECEBE' : 'PENDENTE'}</span>`;
     lista.appendChild(div);
   });
 }
@@ -502,30 +490,29 @@ function renderRodas(grupo) {
 // ── PERFIL MEMBRO ────────────────────────────────────────────
 function abrirPerfilMembro(m) {
   _membroAtual = m;
-  
-  const fotoGrande = document.getElementById('membroFotoGrande');
-  renderAvatar(fotoGrande, m.foto_perfil, m.nome);
-  fotoGrande.style.height = '300px';
-  fotoGrande.style.borderRadius = '0';
-  
+  const fotoEl = document.getElementById('membroFotoGrande');
+  if (m.foto_perfil && m.foto_perfil !== '') {
+    fotoEl.style.backgroundImage = `url(${m.foto_perfil})`;
+    fotoEl.style.backgroundSize = 'cover';
+    fotoEl.style.backgroundPosition = 'center';
+    fotoEl.innerHTML = '';
+  } else {
+    fotoEl.style.backgroundImage = '';
+    fotoEl.innerHTML = `<span class="membro-foto-letra">${(m.nome?.[0]||'?').toUpperCase()}</span>`;
+  }
   document.getElementById('membroPerfilNome').textContent = m.nome || '';
   document.getElementById('membroPerfilTel').textContent = m.telefone || '';
-  
   let infoExtra = '';
   if (m.provincia) infoExtra += `<div><span style="color:var(--muted)">Provincia:</span> ${esc(m.provincia)}</div>`;
   if (m.municipio) infoExtra += `<div><span style="color:var(--muted)">Municipio:</span> ${esc(m.municipio)}</div>`;
   if (m.data_nasc) infoExtra += `<div><span style="color:var(--muted)">Data de nascimento:</span> ${esc(m.data_nasc)}</div>`;
-  if (m.email) infoExtra += `<div><span style="color:var(--muted)">Email:</span> ${esc(m.email)}</div>`;
-  
   document.getElementById('membroInfoExtra').innerHTML = infoExtra;
   document.getElementById('membroStars').innerHTML = renderEstrelas(m.reputacao || 0, m.total_avaliacoes);
   document.getElementById('membroStarsCount').textContent = m.total_avaliacoes ? m.total_avaliacoes + ' avaliacoes' : 'Sem avaliacoes';
-  
   const perfil = KixikilaManager.getSessao()?.perfil;
   const eProprio = m.telefone === perfil?.telefone;
   const btnAvaliar = document.querySelector('#modalMembroPerfil .btn-primary');
   if (btnAvaliar) btnAvaliar.style.display = eProprio ? 'none' : 'block';
-  
   document.getElementById('modalMembroPerfil').style.display = 'flex';
 }
 
@@ -662,7 +649,7 @@ function renderChat(grupo, perfil) {
     return;
   }
   msgs.forEach(msg => {
-    const meu = msg.telefone === perfil?.telefone;
+    const meu = msg.telefone?.replace(/\D/g,'') === perfil?.telefone?.replace(/\D/g,'');
     const wrap = document.createElement('div');
     wrap.className = 'chat-balao-wrap ' + (meu ? 'meu' : 'outro');
     wrap.innerHTML = `${!meu ? `<span class="chat-autor">${esc(msg.nome)}</span>` : ''}<div class="chat-balao ${meu?'meu':'outro'}">${esc(msg.texto)}</div><span class="chat-data">${(msg.data||'').replace('T',' ').slice(0,16)}</span>`;
@@ -722,11 +709,17 @@ async function encerrarGrupo() {
 function abrirPerfil() {
   const perfil = KixikilaManager.getSessao()?.perfil;
   if (!perfil) return;
-  
   const av = document.getElementById('perfilAvatarModal');
-  renderAvatar(av, perfil.foto_perfil, perfil.nome);
   av.dataset.novaFoto = '';
-  
+  if (perfil.foto_perfil) {
+    av.style.backgroundImage = `url(${perfil.foto_perfil})`;
+    av.style.backgroundSize = 'cover';
+    av.style.backgroundPosition = 'center';
+    av.textContent = '';
+  } else {
+    av.style.backgroundImage = '';
+    av.textContent = (perfil.nome?.[0]||'K').toUpperCase();
+  }
   document.getElementById('perfilNomeModal').textContent = perfil.nome || '';
   document.getElementById('perfilTelModal').textContent = perfil.telefone || '';
   document.getElementById('editNome').value = perfil.nome || '';
@@ -735,7 +728,6 @@ function abrirPerfil() {
   document.getElementById('perfilDataNasc').textContent = perfil.data_nasc || 'Nao definido';
   document.getElementById('perfilProvincia').textContent = perfil.provincia || 'Nao definido';
   document.getElementById('perfilMunicipio').textContent = perfil.municipio || 'Nao definido';
-  
   document.getElementById('modalPerfil').style.display = 'flex';
 }
 
