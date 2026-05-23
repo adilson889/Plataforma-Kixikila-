@@ -80,12 +80,12 @@ function mostrarPagina(nome) {
   document.querySelectorAll('.pagina').forEach(p => p.style.display = 'none');
   const pagina = document.getElementById('pagina' + nome);
   if (pagina) pagina.style.display = 'flex';
-  lucide.createIcons();
+  if (nome !== 'Dashboard') lucide.createIcons();
   if (nome === 'Dashboard') {
     carregarDashboard();
     carregarFeedDashboard();
     iniciarSync();
-    setTimeout(() => { configurarScrollToTop(); configurarPullToRefresh(); garantirIconesCards(); }, 500);
+    setTimeout(configurarScrollToTop, 300);
   } else {
     pararSync();
   }
@@ -103,8 +103,7 @@ window.addEventListener('popstate', (e) => {
     document.querySelectorAll('.pagina').forEach(p => p.style.display = 'none');
     const el = document.getElementById('pagina' + pagina);
     if (el) el.style.display = 'flex';
-    lucide.createIcons();
-    if (pagina === 'Dashboard') { carregarDashboard(); carregarFeedDashboard(); }
+    if (pagina !== 'Dashboard') lucide.createIcons();
   }
 });
 
@@ -117,7 +116,7 @@ function iniciarSync() {
   _syncInterval = setInterval(async () => {
     if (document.visibilityState === 'hidden') return;
     try {
-      if (_tabAtual === 'descobrir') { await carregarFeedDashboard(true); setTimeout(garantirIconesCards, 100); }
+      if (_tabAtual === 'descobrir') await carregarFeedDashboard(true);
       else if (_tabAtual === 'meus') await carregarMeusGruposDashboard(true);
       await carregarNotificacoes();
     } catch (_) {}
@@ -267,8 +266,6 @@ async function carregarFeedDashboard(silencioso = false) {
         </div>`;
       container.appendChild(card);
     }
-    // Ícones estáticos fora do feed (navbar, tabs)
-    lucide.createIcons({ attrs: { class: 'lucide' } });
   } catch (e) {
     if (!silencioso) container.innerHTML = '<div style="padding:30px 16px;text-align:center;color:var(--muted);font-size:.88rem">Erro ao carregar grupos.</div>';
   }
@@ -966,9 +963,10 @@ async function abrirPerfilMembro(telefone) {
   if (!container) return;
   container.innerHTML = '<p style="text-align:center;padding:40px;color:var(--muted)">A carregar...</p>';
   try {
-    const [perfil, avaliacoes] = await Promise.all([
+    const [perfil, stats, avaliacoes] = await Promise.all([
       KixikilaManager.carregarReputacao(telefone),
-      KixikilaManager.carregarAvaliacoesRecebidas(telefone)
+      KixikilaManager.carregarStats(telefone).catch(() => ({})),
+      KixikilaManager.carregarAvaliacoesRecebidas(telefone).catch(() => [])
     ]);
     const estrelas = KixikilaManager.reputacaoEstrelas(perfil.reputacao || 0);
     const texto    = KixikilaManager.reputacaoTexto(perfil.reputacao || 0);
@@ -1003,11 +1001,11 @@ async function abrirPerfilMembro(telefone) {
         return `
           <div style="display:flex;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border)">
             <div style="width:36px;height:36px;border-radius:50%;background:var(--r-soft);color:var(--r);font-weight:800;font-size:.9rem;display:flex;align-items:center;justify-content:center;flex-shrink:0">
-              ${escapeHtml((a.avaliador_nome||a.nome||'?')[0].toUpperCase())}
+              ${escapeHtml((a.nome||a.avaliador||'?')[0].toUpperCase())}
             </div>
             <div style="flex:1;min-width:0">
               <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">
-                <span style="font-size:.88rem;font-weight:700;color:var(--text)">${escapeHtml(a.avaliador_nome||a.nome||'Utilizador')}</span>
+                <span style="font-size:.88rem;font-weight:700;color:var(--text)">${escapeHtml(a.nome||a.avaliador||'Utilizador')}</span>
                 <span style="color:#FBBF24;font-size:.85rem">${'★'.repeat(n)}${'☆'.repeat(5-n)}</span>
               </div>
               ${a.comentario?`<div style="font-size:.84rem;color:var(--muted);line-height:1.5">${escapeHtml(a.comentario)}</div>`:''}
