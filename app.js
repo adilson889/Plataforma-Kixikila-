@@ -111,12 +111,11 @@ async function previewFotoReg(evento) {
   } catch { toast('Erro ao processar imagem'); }
 }
 
-// ── FOTO PERFIL (modal editar) ────────────────────────────────
 async function previewFotoPerfil(evento) {
   const f = evento.target.files[0];
   if (!f) return;
   try {
-    const src  = await comprimirImagem(f);
+    const src = await comprimirImagem(f);
     const av   = document.getElementById('perfilAvatarModal');
     av.style.backgroundImage    = `url(${src})`;
     av.style.backgroundSize     = 'cover';
@@ -126,7 +125,6 @@ async function previewFotoPerfil(evento) {
   } catch { toast('Erro ao processar imagem'); }
 }
 
-// ── FOTO GRUPO ────────────────────────────────────────────────
 async function previewFotoGrupo(evento) {
   const f = evento.target.files[0];
   if (!f) return;
@@ -297,51 +295,30 @@ function criarCardFeed(g) {
     </div>
     <div class="feed-valor">${KixikilaManager.formatarValor(g.valor)} KZ</div>
     <div class="feed-progress"><div class="feed-progress-bar" style="width:${pct}%"></div></div>
-    <div class="feed-rodape">
-      <span>${vagas} vaga${vagas!==1?'s':''}</span>
-      <span>por ${esc(g.criador?.nome||'')}</span>
-    </div>`;
+    <div class="feed-rodape"><span>${vagas} vaga${vagas!==1?'s':''}</span><span>por ${esc(g.criador?.nome||'')}</span></div>`;
   return div;
 }
 
 function abrirPreviewGrupo(grupo) {
   _grupoPreview = grupo;
-  
   const vagas = grupo.max_membros - grupo.membros.length;
   const pct = Math.round((grupo.membros.length / grupo.max_membros) * 100);
   
   document.getElementById('previewTitulo').textContent = grupo.nome;
-  
   if (grupo.foto_grupo) {
     document.getElementById('previewFoto').innerHTML = `<img src="${esc(grupo.foto_grupo)}" style="width:100%;height:180px;object-fit:cover;border-radius:12px">`;
   } else {
     document.getElementById('previewFoto').innerHTML = `<div style="width:100%;height:180px;background:var(--r-soft);display:flex;align-items:center;justify-content:center;font-size:3rem;color:var(--r);border-radius:12px">${(grupo.nome||'G')[0].toUpperCase()}</div>`;
   }
   
-  let descricaoHtml = '';
-  if (grupo.descricao) {
-    descricaoHtml = `<div style="margin:12px 0"><strong>Descricao</strong><br>${esc(grupo.descricao)}</div>`;
-  }
-  
-  let regrasHtml = '';
-  if (grupo.regras) {
-    regrasHtml = `<div style="margin:12px 0"><strong>Regras do grupo</strong><br>${esc(grupo.regras)}</div>`;
-  }
-  
-  let localizacaoHtml = '';
-  if (grupo.localizacao) {
-    localizacaoHtml = `<div style="margin:12px 0"><strong>Localizacao</strong><br>${esc(grupo.localizacao)}</div>`;
-  }
-  
-  document.getElementById('previewDescricao').innerHTML = descricaoHtml;
-  document.getElementById('previewRegras').innerHTML = regrasHtml;
-  document.getElementById('previewLocalizacao').innerHTML = localizacaoHtml;
+  document.getElementById('previewDescricao').innerHTML = grupo.descricao ? `<div style="margin:12px 0"><strong>Descricao</strong><br>${esc(grupo.descricao)}</div>` : '';
+  document.getElementById('previewRegras').innerHTML = grupo.regras ? `<div style="margin:12px 0"><strong>Regras do grupo</strong><br>${esc(grupo.regras)}</div>` : '';
+  document.getElementById('previewLocalizacao').innerHTML = grupo.localizacao ? `<div style="margin:12px 0"><strong>Localizacao</strong><br>${esc(grupo.localizacao)}</div>` : '';
   document.getElementById('previewValor').innerHTML = `${KixikilaManager.formatarValor(grupo.valor)} KZ / ${grupo.periodicidade}`;
   document.getElementById('previewProgresso').style.width = pct + '%';
   document.getElementById('previewMembros').textContent = `${grupo.membros.length}/${grupo.max_membros} membros`;
   document.getElementById('previewVagas').textContent = `${vagas} vaga${vagas!==1?'s':''}`;
   document.getElementById('previewCriador').textContent = grupo.criador?.nome || '';
-  
   document.getElementById('modalPreviewGrupo').style.display = 'flex';
 }
 
@@ -349,7 +326,6 @@ async function solicitarEntrada() {
   if (!_grupoPreview) return;
   const perfil = KixikilaManager.getSessao()?.perfil;
   if (!perfil) { toast('Faca login primeiro'); return; }
-  
   try {
     await KixikilaManager.solicitarEntrada(_grupoPreview.codigo, perfil.telefone, perfil.nome);
     toast('Pedido enviado ao administrador do grupo');
@@ -387,10 +363,7 @@ function criarCardMeu(g) {
     </div>
     <div class="feed-valor">${KixikilaManager.formatarValor(g.valor)} KZ</div>
     <div class="feed-progress"><div class="feed-progress-bar" style="width:${pct}%"></div></div>
-    <div class="feed-rodape">
-      <span>${pagos}/${g.membros.length} pagamentos</span>
-      <span>Ronda ${g.ordem_atual||1}</span>
-    </div>`;
+    <div class="feed-rodape"><span>${pagos}/${g.membros.length} pagamentos</span><span>Ronda ${g.ordem_atual||1}</span></div>`;
   return div;
 }
 
@@ -411,10 +384,8 @@ async function criarGrupo() {
   const period      = document.getElementById('criarPeriod')?.value || 'mensal';
   const max         = parseInt(document.getElementById('criarMax')?.value || 6);
   const perfil      = KixikilaManager.getSessao()?.perfil;
-  
   if (!perfil) { toast('Sessao expirada'); return; }
   if (!nome || !valor || valor < 500) { toast('Preenche todos os campos. Minimo 500 KZ'); return; }
-  
   try {
     const codigo = await KixikilaManager.criarGrupo({
       nome, telefone: perfil.telefone, nomeAdmin: perfil.nome,
@@ -465,23 +436,17 @@ function renderGrupo(grupo, perfil) {
   const pagos    = grupo.membros.filter(m => m.pago).length;
   const pct      = Math.round((pagos / grupo.membros.length) * 100);
   const eCriador = grupo.criador?.telefone === perfil?.telefone;
-
-  document.getElementById('appNomeGrupo').textContent  = grupo.nome;
+  document.getElementById('appNomeGrupo').textContent = grupo.nome;
   const pill = document.getElementById('appPill');
-  pill.className   = 'pill ' + pillClass(grupo.estado);
+  pill.className = 'pill ' + pillClass(grupo.estado);
   pill.textContent = pillTexto(grupo.estado);
-
-  document.getElementById('appValor').textContent      = KixikilaManager.formatarValor(grupo.valor) + ' KZ';
-  document.getElementById('appProgresso').style.width  = pct + '%';
+  document.getElementById('appValor').textContent = KixikilaManager.formatarValor(grupo.valor) + ' KZ';
+  document.getElementById('appProgresso').style.width = pct + '%';
   document.getElementById('appPagamentos').textContent = pagos + '/' + grupo.membros.length + ' pagamentos';
-
   const memAtual = grupo.membros.find(m => m.ordem === grupo.ordem_atual);
-  document.getElementById('appMeta').textContent =
-    memAtual ? 'Ronda ' + grupo.ordem_atual + ' — A receber: ' + memAtual.nome : 'Ronda ' + (grupo.ordem_atual||1);
-
+  document.getElementById('appMeta').textContent = memAtual ? 'Ronda ' + grupo.ordem_atual + ' — A receber: ' + memAtual.nome : 'Ronda ' + (grupo.ordem_atual||1);
   document.getElementById('appProximaRonda').textContent = grupo.periodicidade;
-  document.getElementById('btnEncerrar').style.display   = eCriador ? 'block' : 'none';
-
+  document.getElementById('btnEncerrar').style.display = eCriador ? 'block' : 'none';
   renderMembros(grupo, perfil);
   renderRodas(grupo);
 }
@@ -499,13 +464,8 @@ function renderMembros(grupo, perfil) {
       <div class="membro-av${eAtual?' atual':''}" style="background-image:${m.foto_perfil ? `url('${esc(m.foto_perfil)}')` : 'none'};background-size:cover;background-position:center">
         ${!m.foto_perfil ? (m.nome?.[0]||'?').toUpperCase() : ''}
       </div>
-      <div class="membro-info">
-        <div class="membro-nome">${esc(m.nome)}${eProprio ? ' <small style="color:var(--r)">(tu)</small>' : ''}</div>
-        <div class="membro-tel">${esc(m.telefone)}</div>
-      </div>
-      <span class="status ${m.pago?'status-pago':eAtual?'status-recebe':'status-pendente'}">
-        ${m.pago ? 'PAGO' : eAtual ? 'RECEBE' : 'PENDENTE'}
-      </span>`;
+      <div class="membro-info"><div class="membro-nome">${esc(m.nome)}${eProprio ? ' <small style="color:var(--r)">(tu)</small>' : ''}</div><div class="membro-tel">${esc(m.telefone)}</div></div>
+      <span class="status ${m.pago?'status-pago':eAtual?'status-recebe':'status-pendente'}">${m.pago ? 'PAGO' : eAtual ? 'RECEBE' : 'PENDENTE'}</span>`;
     lista.appendChild(div);
   });
 }
@@ -521,13 +481,8 @@ function renderRodas(grupo) {
     div.className = 'roda-item';
     div.innerHTML = `
       <div class="roda-num${eAtual?' atual':concluida?' concluida':''}">${m.ordem}</div>
-      <div class="roda-info">
-        <div class="roda-nome">${esc(m.nome)}</div>
-        <div class="roda-label">Ronda ${m.ordem} de ${total}</div>
-      </div>
-      <span class="roda-estado${eAtual?' atual':concluida?' concluida':' pendente'}">
-        ${eAtual ? 'A RECEBER' : concluida ? 'RECEBEU' : 'AGUARDA'}
-      </span>`;
+      <div class="roda-info"><div class="roda-nome">${esc(m.nome)}</div><div class="roda-label">Ronda ${m.ordem} de ${total}</div></div>
+      <span class="roda-estado${eAtual?' atual':concluida?' concluida':' pendente'}">${eAtual ? 'A RECEBER' : concluida ? 'RECEBEU' : 'AGUARDA'}</span>`;
     lista.appendChild(div);
   });
 }
@@ -535,29 +490,29 @@ function renderRodas(grupo) {
 // ── PERFIL MEMBRO ────────────────────────────────────────────
 function abrirPerfilMembro(m) {
   _membroAtual = m;
-
   const fotoEl = document.getElementById('membroFotoGrande');
-  if (m.foto_perfil) {
-    fotoEl.style.backgroundImage    = `url(${m.foto_perfil})`;
-    fotoEl.style.backgroundSize     = 'cover';
-    fotoEl.style.backgroundPosition = 'top center';
+  if (m.foto_perfil && m.foto_perfil !== '') {
+    fotoEl.style.backgroundImage = `url(${m.foto_perfil})`;
+    fotoEl.style.backgroundSize = 'cover';
+    fotoEl.style.backgroundPosition = 'center';
     fotoEl.innerHTML = '';
   } else {
     fotoEl.style.backgroundImage = '';
     fotoEl.innerHTML = `<span class="membro-foto-letra">${(m.nome?.[0]||'?').toUpperCase()}</span>`;
   }
-
   document.getElementById('membroPerfilNome').textContent = m.nome || '';
-  document.getElementById('membroPerfilTel').textContent  = m.telefone || '';
-  document.getElementById('membroStars').innerHTML        = renderEstrelas(m.reputacao || 0);
-  document.getElementById('membroStarsCount').textContent =
-    m.total_avaliacoes ? m.total_avaliacoes + ' avaliacoes' : 'Sem avaliacoes';
-
-  const perfil   = KixikilaManager.getSessao()?.perfil;
+  document.getElementById('membroPerfilTel').textContent = m.telefone || '';
+  let infoExtra = '';
+  if (m.provincia) infoExtra += `<div><span style="color:var(--muted)">Provincia:</span> ${esc(m.provincia)}</div>`;
+  if (m.municipio) infoExtra += `<div><span style="color:var(--muted)">Municipio:</span> ${esc(m.municipio)}</div>`;
+  if (m.data_nasc) infoExtra += `<div><span style="color:var(--muted)">Data de nascimento:</span> ${esc(m.data_nasc)}</div>`;
+  document.getElementById('membroInfoExtra').innerHTML = infoExtra;
+  document.getElementById('membroStars').innerHTML = renderEstrelas(m.reputacao || 0, m.total_avaliacoes);
+  document.getElementById('membroStarsCount').textContent = m.total_avaliacoes ? m.total_avaliacoes + ' avaliacoes' : 'Sem avaliacoes';
+  const perfil = KixikilaManager.getSessao()?.perfil;
   const eProprio = m.telefone === perfil?.telefone;
   const btnAvaliar = document.querySelector('#modalMembroPerfil .btn-primary');
   if (btnAvaliar) btnAvaliar.style.display = eProprio ? 'none' : 'block';
-
   document.getElementById('modalMembroPerfil').style.display = 'flex';
 }
 
@@ -566,17 +521,16 @@ function abrirAvaliarMembro() {
   if (!_membroAtual) return;
   fecharModal('modalMembroPerfil');
   _estrelasAvaliacao = 0;
-  document.getElementById('avaliarNome').textContent    = _membroAtual.nome || '';
-  document.getElementById('avaliarComentario').value    = '';
-
+  document.getElementById('avaliarNome').textContent = _membroAtual.nome || '';
+  document.getElementById('avaliarComentario').value = '';
   const wrap = document.getElementById('estrelasInput');
   wrap.innerHTML = '';
   for (let i = 1; i <= 5; i++) {
     const btn = document.createElement('button');
-    btn.className   = 'star-btn';
+    btn.className = 'star-btn';
     btn.textContent = '★';
     btn.dataset.val = i;
-    btn.onclick     = () => {
+    btn.onclick = () => {
       _estrelasAvaliacao = i;
       wrap.querySelectorAll('.star-btn').forEach((b, j) => b.classList.toggle('on', j < i));
     };
@@ -597,22 +551,89 @@ async function confirmarAvaliacao() {
   } catch (e) { toast(e.message); }
 }
 
+// ── PEDIDOS ───────────────────────────────────────────────────
+async function carregarPedidos() {
+  if (!_codigoAtual) return;
+  try {
+    const grupo = await KixikilaManager.carregarGrupo(_codigoAtual);
+    const perfil = KixikilaManager.getSessao()?.perfil;
+    const eCriador = grupo.criador?.telefone === perfil?.telefone;
+    if (!eCriador) {
+      document.getElementById('conteudoPedidos').innerHTML = '<div class="vazio"><p>Apenas o administrador ve os pedidos.</p></div>';
+      return;
+    }
+    const pedidos = grupo.pedidos || [];
+    if (!pedidos.length) {
+      document.getElementById('conteudoPedidos').innerHTML = '<div class="vazio"><p>Nenhum pedido de entrada pendente.</p></div>';
+      return;
+    }
+    let html = '';
+    for (const p of pedidos) {
+      html += `
+        <div class="pedido-item" style="display:flex; align-items:center; gap:12px; padding:12px 16px; border-bottom:1px solid var(--border)">
+          <div class="pedido-avatar" style="width:40px;height:40px;border-radius:50%;background:var(--r-soft);display:flex;align-items:center;justify-content:center;font-size:1.2rem;font-weight:800;color:var(--r)">${(p.nome?.[0]||'?').toUpperCase()}</div>
+          <div style="flex:1"><div style="font-weight:700">${esc(p.nome)}</div><div style="font-size:.75rem;color:var(--muted)">${esc(p.telefone)}</div></div>
+          <div style="display:flex; gap:8px"><button class="btn-outline" style="padding:6px 12px" onclick="responderPedido('${p.id}', 'aceitar')">Aceitar</button><button class="btn-outline" style="padding:6px 12px;color:var(--r2)" onclick="responderPedido('${p.id}', 'recusar')">Recusar</button></div>
+        </div>`;
+    }
+    document.getElementById('conteudoPedidos').innerHTML = html;
+  } catch { 
+    document.getElementById('conteudoPedidos').innerHTML = '<div class="vazio"><p>Erro ao carregar pedidos.</p></div>';
+  }
+}
+
+async function responderPedido(pedidoId, acao) {
+  try {
+    await KixikilaManager.responderPedido(_codigoAtual, pedidoId, acao);
+    toast(acao === 'aceitar' ? 'Membro aceite no grupo' : 'Pedido recusado');
+    carregarPedidos();
+    recarregarGrupo();
+  } catch (e) { toast(e.message); }
+}
+
 // ── TABS INTERNAS ────────────────────────────────────────────
 function mostrarTabApp(tab) {
   _tabAppAtual = tab;
-  ['membros','rodas'].forEach(t => {
-    document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1))
-      ?.classList.toggle('activo', t === tab);
-    document.getElementById('conteudo' + t.charAt(0).toUpperCase() + t.slice(1))
-      .style.display = t === tab ? 'block' : 'none';
+  const tabs = ['membros', 'rodas', 'chat', 'pedidos'];
+  tabs.forEach(t => {
+    const btn = document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1));
+    if (btn) btn.classList.toggle('activo', t === tab);
+    const content = document.getElementById('conteudo' + t.charAt(0).toUpperCase() + t.slice(1));
+    if (content) content.style.display = t === tab ? 'block' : 'none';
   });
-  document.getElementById('tabChat')?.classList.remove('activo');
+  if (tab === 'pedidos') carregarPedidos();
 }
 
 // ── CHAT ─────────────────────────────────────────────────────
+function autoResizeChat(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+function handleChatKey(event) {
+  if (event.key === 'Enter' && !event.shiftKey) {
+    event.preventDefault();
+    enviarMsg();
+  }
+}
+
+async function enviarMsg() {
+  const input = document.getElementById('chatInput');
+  const texto = input?.value.trim();
+  const perfil = KixikilaManager.getSessao()?.perfil;
+  if (!texto || !perfil) return;
+  input.value = '';
+  autoResizeChat(input);
+  try {
+    await KixikilaManager.enviarMensagem(_codigoAtual, perfil.telefone, perfil.nome, texto);
+    const g = await KixikilaManager.carregarGrupo(_codigoAtual);
+    renderChat(g, perfil);
+  } catch { toast('Erro ao enviar mensagem'); }
+}
+
 function abrirChat() {
   KixikilaManager.carregarGrupo(_codigoAtual).then(g => {
-    document.getElementById('chatNomeGrupo').textContent    = g.nome;
+    document.getElementById('chatNomeGrupo').textContent = g.nome;
     document.getElementById('chatMembrosCount').textContent = g.membros.length + ' membros';
     renderChat(g, KixikilaManager.getSessao()?.perfil);
     irPara('paginaChat');
@@ -621,42 +642,20 @@ function abrirChat() {
 
 function renderChat(grupo, perfil) {
   const container = document.getElementById('chatMensagens');
-  const msgs      = grupo.mensagens || [];
+  const msgs = grupo.mensagens || [];
   container.innerHTML = '';
   if (!msgs.length) {
     container.innerHTML = '<p style="text-align:center;color:var(--muted);padding:32px;font-size:.88rem">Sem mensagens ainda.</p>';
     return;
   }
   msgs.forEach(msg => {
-    const meu  = msg.telefone === perfil?.telefone;
+    const meu = msg.telefone === perfil?.telefone;
     const wrap = document.createElement('div');
     wrap.className = 'chat-balao-wrap ' + (meu ? 'meu' : 'outro');
-    wrap.innerHTML = `
-      ${!meu ? `<span class="chat-autor">${esc(msg.nome)}</span>` : ''}
-      <div class="chat-balao ${meu?'meu':'outro'}">${esc(msg.texto)}</div>
-      <span class="chat-data">${(msg.data||'').replace('T',' ').slice(0,16)}</span>`;
+    wrap.innerHTML = `${!meu ? `<span class="chat-autor">${esc(msg.nome)}</span>` : ''}<div class="chat-balao ${meu?'meu':'outro'}">${esc(msg.texto)}</div><span class="chat-data">${(msg.data||'').replace('T',' ').slice(0,16)}</span>`;
     container.appendChild(wrap);
   });
   container.scrollTop = container.scrollHeight;
-}
-
-async function enviarMsg() {
-  const input  = document.getElementById('chatInput');
-  const texto  = input?.value.trim() || '';
-  const perfil = KixikilaManager.getSessao()?.perfil;
-  if (!texto || !perfil) return;
-  input.value = '';
-  crescerTextarea(input);
-  try {
-    await KixikilaManager.enviarMensagem(_codigoAtual, perfil.telefone, perfil.nome, texto);
-    const g = await KixikilaManager.carregarGrupo(_codigoAtual);
-    renderChat(g, perfil);
-  } catch { toast('Erro ao enviar mensagem'); }
-}
-
-function crescerTextarea(el) {
-  el.style.height = 'auto';
-  el.style.height = Math.min(el.scrollHeight, 140) + 'px';
 }
 
 // ── ACOES GRUPO ──────────────────────────────────────────────
@@ -713,8 +712,8 @@ function abrirPerfil() {
   const av = document.getElementById('perfilAvatarModal');
   av.dataset.novaFoto = '';
   if (perfil.foto_perfil) {
-    av.style.backgroundImage    = `url(${perfil.foto_perfil})`;
-    av.style.backgroundSize     = 'cover';
+    av.style.backgroundImage = `url(${perfil.foto_perfil})`;
+    av.style.backgroundSize = 'cover';
     av.style.backgroundPosition = 'center';
     av.textContent = '';
   } else {
@@ -722,9 +721,13 @@ function abrirPerfil() {
     av.textContent = (perfil.nome?.[0]||'K').toUpperCase();
   }
   document.getElementById('perfilNomeModal').textContent = perfil.nome || '';
-  document.getElementById('perfilTelModal').textContent  = perfil.telefone || '';
-  document.getElementById('editNome').value  = perfil.nome || '';
+  document.getElementById('perfilTelModal').textContent = perfil.telefone || '';
+  document.getElementById('editNome').value = perfil.nome || '';
   document.getElementById('editSenha').value = '';
+  document.getElementById('perfilEmail').textContent = perfil.email || 'Nao definido';
+  document.getElementById('perfilDataNasc').textContent = perfil.data_nasc || 'Nao definido';
+  document.getElementById('perfilProvincia').textContent = perfil.provincia || 'Nao definido';
+  document.getElementById('perfilMunicipio').textContent = perfil.municipio || 'Nao definido';
   document.getElementById('modalPerfil').style.display = 'flex';
 }
 
@@ -737,11 +740,7 @@ async function guardarPerfil() {
   const novaFoto = av.dataset.novaFoto || undefined;
   if (!nome) { toast('O nome e obrigatorio'); return; }
   try {
-    await KixikilaManager.atualizarPerfil({
-      telefone: perfil.telefone, nome,
-      foto_perfil: novaFoto,
-      senha: senha || undefined
-    });
+    await KixikilaManager.atualizarPerfil({ telefone: perfil.telefone, nome, foto_perfil: novaFoto, senha: senha || undefined });
     fecharModal('modalPerfil');
     atualizarAvatar();
     toast('Perfil actualizado!');
@@ -771,15 +770,9 @@ async function confirmarEliminarConta() {
 function skeleton() {
   return Array(3).fill(0).map(() => `
     <div style="margin:12px 16px 0;padding:16px;background:var(--bg2);border-radius:14px;border:1px solid var(--border)">
-      <div style="display:flex;gap:12px;margin-bottom:12px">
-        <div class="skel" style="width:44px;height:44px;border-radius:12px;flex-shrink:0"></div>
-        <div style="flex:1;display:flex;flex-direction:column;gap:8px;padding-top:4px">
-          <div class="skel" style="height:12px;width:55%;border-radius:6px"></div>
-          <div class="skel" style="height:10px;width:38%;border-radius:6px"></div>
-        </div>
-      </div>
-      <div class="skel" style="height:22px;width:50%;border-radius:6px;margin-bottom:10px"></div>
-      <div class="skel" style="height:4px;border-radius:99px"></div>
+      <div style="display:flex;gap:12px;margin-bottom:12px"><div class="skel" style="width:44px;height:44px;border-radius:12px;flex-shrink:0"></div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:8px;padding-top:4px"><div class="skel" style="height:12px;width:55%;border-radius:6px"></div><div class="skel" style="height:10px;width:38%;border-radius:6px"></div></div></div>
+      <div class="skel" style="height:22px;width:50%;border-radius:6px;margin-bottom:10px"></div><div class="skel" style="height:4px;border-radius:99px"></div>
     </div>`).join('');
 }
 
