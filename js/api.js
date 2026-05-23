@@ -2,34 +2,53 @@ const KixikilaManager = (() => {
   const BASE_URL = 'https://sire-kixikila-api.vercel.app/';
   let _sessao = null;
 
-  function getSessao()        { return _sessao; }
-  function setSessao(perfil)  {
+  // ── SESSAO (localStorage — sobrevive ao refresh) ─────────────
+  function getSessao() { return _sessao; }
+
+  function setSessao(dados) {
+    const perfil = dados?.perfil ?? dados;
     _sessao = { perfil };
-    try { sessionStorage.setItem('kx_sessao', JSON.stringify(perfil)); } catch (_) {}
+    try { localStorage.setItem('kx_sessao', JSON.stringify(perfil)); } catch (_) {}
   }
+
   function limparSessao() {
     _sessao = null;
-    try { sessionStorage.removeItem('kx_sessao'); } catch (_) {}
+    try { localStorage.removeItem('kx_sessao'); } catch (_) {}
+  }
+
+  // ── HTTP COM RETRY E BACKOFF ──────────────────────────────────
+  async function fetchComRetry(url, opcoes = {}, tentativas = 3) {
+    for (let i = 0; i < tentativas; i++) {
+      try {
+        const r     = await fetch(url, opcoes);
+        const dados = await r.json();
+        if (r.status === 429) {
+          // rate limit — espera e tenta de novo
+          await new Promise(res => setTimeout(res, 2000 * (i + 1)));
+          continue;
+        }
+        if (!r.ok) throw new Error(dados.erro || dados.message || `Erro ${r.status}`);
+        return dados;
+      } catch (e) {
+        if (i === tentativas - 1) throw e;
+        await new Promise(res => setTimeout(res, 1000 * (i + 1)));
+      }
+    }
   }
 
   async function post(endpoint, corpo) {
-    const r = await fetch(BASE_URL + endpoint, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+    return fetchComRetry(BASE_URL + endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(corpo)
     });
-    const dados = await r.json();
-    if (!r.ok) throw new Error(dados.erro || dados.message || `Erro ${r.status}`);
-    return dados;
   }
 
   async function get(endpoint) {
-    const r     = await fetch(BASE_URL + endpoint);
-    const dados = await r.json();
-    if (!r.ok) throw new Error(dados.erro || `Erro ${r.status}`);
-    return dados;
+    return fetchComRetry(BASE_URL + endpoint);
   }
 
-  // ── AUTH ────────────────────────────────────────────────────
+  // ── AUTH ─────────────────────────────────────────────────────
   async function registar({ telefone, nome, senha, foto_perfil }) {
     const dados = await post('auth/registar', { telefone, nome, senha, foto_perfil });
     setSessao(dados.perfil);
@@ -42,14 +61,11 @@ const KixikilaManager = (() => {
     return dados.perfil;
   }
 
-  // ── ELIMINAR CONTA ──────────────────────────────────────────
   async function eliminarConta(telefone, senha) {
-    const dados = await post('auth/eliminar', { telefone, senha });
-    limparSessao();
-    return dados;
+    return post('auth/eliminar', { telefone, senha });
   }
 
-  // ── PERFIL ──────────────────────────────────────────────────
+  // ── PERFIL ───────────────────────────────────────────────────
   async function atualizarPerfil({ telefone, nome, genero, cor, foto_perfil, senha }) {
     const dados = await post('perfil', { telefone, nome, genero, cor, foto_perfil, senha });
     setSessao(dados.perfil);
@@ -68,18 +84,14 @@ const KixikilaManager = (() => {
     return get(`membro/${telefone.replace(/\+/g, '')}/reputacao`);
   }
 
-  // ── AVALIAÇÕES RECEBIDAS ─────────────────────────────────────
   async function carregarAvaliacoesRecebidas(telefone) {
     try {
       const dados = await get(`perfil/${telefone.replace(/\+/g, '')}/avaliacoes`);
       return dados.avaliacoes || [];
-    } catch (e) {
-      console.error('Erro ao carregar avaliações recebidas:', e);
-      return [];
-    }
+    } catch { return []; }
   }
 
-  // ── GRUPOS DO MEMBRO ────────────────────────────────────────
+  // ── GRUPOS ───────────────────────────────────────────────────
   async function carregarMeusGrupos() {
     const telefone = _sessao?.perfil?.telefone;
     if (!telefone) throw new Error('Sessão inválida');
@@ -87,19 +99,20 @@ const KixikilaManager = (() => {
     return dados.grupos || [];
   }
 
-  // ── FEED ────────────────────────────────────────────────────
   async function carregarFeed({ estado, periodicidade, limite } = {}) {
-    let query = 'grupos?';
-    if (estado)        query += `estado=${estado}&`;
-    if (periodicidade) query += `periodicidade=${periodicidade}&`;
-    if (limite)        query += `limite=${limite}`;
-    const dados = await get(query);
+    const params = new URLSearchParams();
+    if (estado)        params.set('estado', estado);
+    if (periodicidade) params.set('periodicidade', periodicidade);
+    if (limite)        params.set('limite', String(limite));
+    const dados = await get('grupos?' + params.toString());
     return dados.grupos || [];
   }
 
-  // ── GRUPOS ──────────────────────────────────────────────────
   async function criarGrupo(nome, telefone, nomeAdmin, valor, frequencia, maxMembros, foto) {
-    const dados = await post('grupo/criar', { nome, telefone, nomeAdmin, valor, periodicidade: frequencia, maxMembros, foto_grupo: foto || '' });
+    const dados = await post('grupo/criar', {
+      nome, telefone, nomeAdmin, valor,
+      periodicidade: frequencia, maxMembros, foto_grupo: foto || ''
+    });
     return dados.codigo;
   }
 
@@ -141,13 +154,13 @@ const KixikilaManager = (() => {
     return post(`grupo/${codigo}/mensagem`, { telefone, nome, texto });
   }
 
-  // ── AVALIAÇÃO ───────────────────────────────────────────────
+  // ── AVALIACAO ────────────────────────────────────────────────
   async function avaliar(avaliador, avaliado, estrelas, comentario) {
     const dados = await post('avaliar', { avaliador, avaliado, estrelas, comentario });
     return dados.reputacao || 0;
   }
 
-  // ── NOTIFICAÇÕES ────────────────────────────────────────────
+  // ── NOTIFICACOES ─────────────────────────────────────────────
   async function carregarNotificacoes() {
     const telefone = _sessao?.perfil?.telefone;
     if (!telefone) return { notificacoes: [], nao_lidas: 0 };
@@ -159,24 +172,14 @@ const KixikilaManager = (() => {
     if (!telefone) return;
     return post(`notificacoes/${telefone.replace(/\+/g, '')}/marcar-lida`, { id });
   }
-    // ── AVALIAÇÕES RECEBIDAS ─────────────────────────────────────
-  async function carregarAvaliacoesRecebidas(telefone) {
-    try {
-      const dados = await get(`perfil/${telefone.replace(/\+/g, '')}/avaliacoes`);
-      return dados.avaliacoes || [];
-    } catch (e) {
-      console.error('Erro ao carregar avaliações recebidas:', e);
-      return [];
-    }
-  }
 
-  // ── LEADERBOARD ─────────────────────────────────────────────
+  // ── LEADERBOARD ──────────────────────────────────────────────
   async function carregarLeaderboard() {
     const dados = await get('leaderboard');
     return dados.leaderboard || [];
   }
 
-  // ── UTILITÁRIOS ─────────────────────────────────────────────
+  // ── UTILITARIOS ──────────────────────────────────────────────
   function reputacaoTexto(r) {
     if (r >= 4.5) return 'Excelente';
     if (r >= 3.5) return 'Confiável';
@@ -203,8 +206,7 @@ const KixikilaManager = (() => {
     carregarMeusGrupos, carregarFeed,
     criarGrupo, carregarGrupo, entrarGrupo,
     sairGrupo, removerMembro, convidarMembro, encerrarGrupo,
-    carregarHistorico,
-    carregarAvaliacoesRecebidas, registarPagamento, enviarMensagem,
+    carregarHistorico, registarPagamento, enviarMensagem,
     avaliar,
     carregarNotificacoes, marcarNotificacaoLida,
     carregarLeaderboard,
