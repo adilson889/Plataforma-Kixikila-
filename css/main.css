@@ -720,8 +720,8 @@ html, body {
 }
 
 .membro-foto-grande {
-  width: 80px;
-  height: 80px;
+  width: 72px;
+  height: 72px;
   border-radius: 50%;
   background: var(--r-soft);
   display: flex; align-items: center; justify-content: center;
@@ -732,7 +732,7 @@ html, body {
 }
 
 .membro-foto-letra {
-  font-size: 5rem;
+  font-size: 1.8rem;
   font-weight: 900;
   color: var(--r);
   opacity: .4;
@@ -793,3 +793,18 @@ html, body {
 
 .star-btn.on         { color: #FBBF24; }
 .star-btn:active     { transform: scale(1.2); }
+
+/* ── FIX: modal membro compacto ── */
+.modal-membro .membro-perfil-info {
+  display: flex;
+  flex-direction: column;
+  padding: 16px 20px 20px;
+}
+.modal-membro .membro-foto-grande {
+  margin: 16px 20px 0;
+}
+/* Agrupar foto + nome numa linha */
+.modal-membro > .membro-foto-grande,
+.modal-membro > .membro-perfil-info {
+  display: block;
+}
