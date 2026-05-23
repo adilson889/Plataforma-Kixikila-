@@ -71,11 +71,10 @@ const KixikilaManager = (() => {
   // ── AVALIAÇÕES RECEBIDAS ─────────────────────────────────────
   async function carregarAvaliacoesRecebidas(telefone) {
     try {
-      // O servidor não tem endpoint /avaliacoes separado
-      // As avaliações estão dentro do perfil mas são removidas no GET público
-      // Usamos os stats como fallback
-      return [];
+      const dados = await get(`perfil/${telefone.replace(/\+/g, '')}/avaliacoes`);
+      return dados.avaliacoes || [];
     } catch (e) {
+      console.error('Erro ao carregar avaliações recebidas:', e);
       return [];
     }
   }
@@ -90,18 +89,17 @@ const KixikilaManager = (() => {
 
   // ── FEED ────────────────────────────────────────────────────
   async function carregarFeed({ estado, periodicidade, limite } = {}) {
-    const params = new URLSearchParams();
-    if (estado)        params.set('estado', estado);
-    if (periodicidade) params.set('periodicidade', periodicidade);
-    if (limite)        params.set('limite', limite);
-    const query = 'grupos?' + params.toString();
+    let query = 'grupos?';
+    if (estado)        query += `estado=${estado}&`;
+    if (periodicidade) query += `periodicidade=${periodicidade}&`;
+    if (limite)        query += `limite=${limite}`;
     const dados = await get(query);
     return dados.grupos || [];
   }
 
   // ── GRUPOS ──────────────────────────────────────────────────
-  async function criarGrupo(nome, telefone, nomeAdmin, valor, frequencia, maxMembros) {
-    const dados = await post('grupo/criar', { nome, telefone, nomeAdmin, valor, periodicidade: frequencia, maxMembros });
+  async function criarGrupo(nome, telefone, nomeAdmin, valor, frequencia, maxMembros, foto) {
+    const dados = await post('grupo/criar', { nome, telefone, nomeAdmin, valor, periodicidade: frequencia, maxMembros, foto_grupo: foto || '' });
     return dados.codigo;
   }
 
@@ -161,6 +159,17 @@ const KixikilaManager = (() => {
     if (!telefone) return;
     return post(`notificacoes/${telefone.replace(/\+/g, '')}/marcar-lida`, { id });
   }
+    // ── AVALIAÇÕES RECEBIDAS ─────────────────────────────────────
+  async function carregarAvaliacoesRecebidas(telefone) {
+    try {
+      const dados = await get(`perfil/${telefone.replace(/\+/g, '')}/avaliacoes`);
+      return dados.avaliacoes || [];
+    } catch (e) {
+      console.error('Erro ao carregar avaliações recebidas:', e);
+      return [];
+    }
+  }
+
   // ── LEADERBOARD ─────────────────────────────────────────────
   async function carregarLeaderboard() {
     const dados = await get('leaderboard');
@@ -194,7 +203,8 @@ const KixikilaManager = (() => {
     carregarMeusGrupos, carregarFeed,
     criarGrupo, carregarGrupo, entrarGrupo,
     sairGrupo, removerMembro, convidarMembro, encerrarGrupo,
-    carregarHistorico, registarPagamento, enviarMensagem,
+    carregarHistorico,
+    carregarAvaliacoesRecebidas, registarPagamento, enviarMensagem,
     avaliar,
     carregarNotificacoes, marcarNotificacaoLida,
     carregarLeaderboard,
