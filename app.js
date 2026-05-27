@@ -924,7 +924,24 @@ function abrirPerfilMembro(membro) {
 
     document.getElementById('modalMembroPerfil').style.display = 'flex';
   }).catch(() => {
-    toast('Erro ao carregar dados do membro');
+    const perfilLogado = KixikilaManager.getSessao()?.perfil;
+    const isProprio    = membro.telefone === perfilLogado?.telefone;
+
+    const fotoEl = document.getElementById('membroFotoGrande');
+    fotoEl.style.backgroundImage = '';
+    fotoEl.textContent = (membro.nome?.[0] || '?').toUpperCase();
+
+    document.getElementById('membroPerfilNome').textContent  = membro.nome     || '';
+    document.getElementById('membroPerfilTel').textContent   = membro.telefone || '';
+    document.getElementById('membroLocalizacao').textContent = '';
+    document.getElementById('membroScoreNum').textContent    = '—';
+    document.getElementById('membroStars').innerHTML         = renderEstrelas(0, 0);
+    document.getElementById('membroStarsCount').textContent  = 'Sem avaliações';
+    document.getElementById('membroInfoExtra').innerHTML     = '';
+
+    document.getElementById('btnMensagemMembro').style.display = isProprio ? 'none' : 'flex';
+    document.getElementById('btnAvaliarMembro').style.display  = isProprio ? 'none' : 'block';
+    document.getElementById('modalMembroPerfil').style.display = 'flex';
   });
 }
 
@@ -1191,10 +1208,10 @@ async function abrirPerfil() {
   document.getElementById('editSenha').value = '';
   document.getElementById('modalPerfil').style.display = 'flex';
 
-  // Carregar stats
+ 
+ // Carregar stats
   try {
-    const tel = perfil.telefone.replace(/\+/g, '');
-    const stats = await KixikilaManager.http('perfil/' + tel + '/stats');
+    const stats = await KixikilaManager.carregarStats();
     document.getElementById('statGruposAtivos').textContent  = stats.grupos_activos || 0;
     document.getElementById('statReputacao').textContent     = stats.reputacao ? stats.reputacao.toFixed(1) + '★' : '—';
     document.getElementById('statConcluidos').textContent    = stats.grupos_concluidos || 0;
@@ -1220,6 +1237,7 @@ async function guardarPerfil() {
     toast('Perfil actualizado!');
   } catch (e) { toast(e.message); }
 }
+ 
 
 async function confirmarEliminarConta() {
   fecharModal('modalPerfil');
