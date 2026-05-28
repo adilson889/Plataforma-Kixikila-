@@ -586,7 +586,7 @@ function criarCardFeed(g) {
       </div>
       <span class="pill ${pillClass(g.estado)}">${pillTexto(g.estado)}</span>
     </div>
-    <div class="feed-valor">${KixikilaManager.formatarValor(g.valor)} KZ</div>
+    `<div class="feed-valor">${formatarMoeda(g.valor)}</div>`
     <div class="feed-progress"><div class="feed-progress-bar" style="width:${pct}%"></div></div>
     <div class="feed-rodape">
       <span>${vagas} vaga${vagas!==1?'s':''}</span>
@@ -627,8 +627,8 @@ function abrirPreviewGrupo(grupo) {
   document.getElementById('previewDescricao').innerHTML = descricaoHtml;
   document.getElementById('previewRegras').innerHTML = regrasHtml;
   document.getElementById('previewLocalizacao').innerHTML = localizacaoHtml;
-  document.getElementById('previewValor').innerHTML = `${KixikilaManager.formatarValor(grupo.valor)} KZ / ${grupo.periodicidade}`;
-  document.getElementById('previewProgresso').style.width = pct + '%';
+  document.getElementById('previewValor').innerHTML = `${formatarMoeda(grupo.valor)} / ${grupo.periodicidade}`;
+   document.getElementById('previewProgresso').style.width = pct + '%';
   document.getElementById('previewMembros').textContent = `${grupo.membros.length}/${grupo.max_membros} membros`;
   document.getElementById('previewVagas').textContent = `${vagas} vaga${vagas!==1?'s':''}`;
   document.getElementById('previewCriador').textContent = grupo.criador?.nome || '';
@@ -676,7 +676,7 @@ function criarCardMeu(g) {
       </div>
       <span class="pill ${pillClass(g.estado)}">${pillTexto(g.estado)}</span>
     </div>
-    <div class="feed-valor">${KixikilaManager.formatarValor(g.valor)} KZ</div>
+    `<div class="feed-valor">${formatarMoeda(g.valor)}</div>`
     <div class="feed-progress"><div class="feed-progress-bar" style="width:${pct}%"></div></div>
     <div class="feed-rodape">
       <span>${pagos}/${g.membros.length} pagamentos</span>
@@ -730,7 +730,7 @@ async function criarGrupo() {
   const perfil      = KixikilaManager.getSessao()?.perfil;
   
   if (!perfil) { toast('Sessao expirada'); return; }
-  if (!nome || !valor || valor < 500) { toast('Preenche todos os campos. Minimo 500 KZ'); return; }
+  if (!nome || !valor || valor < 1) { toast('Preenche todos os campos'); return; }
   
   try {
     const codigo = await KixikilaManager.criarGrupo({
@@ -803,7 +803,7 @@ function renderGrupo(grupo, perfil) {
   pill.className   = 'pill ' + pillClass(grupo.estado);
   pill.textContent = pillTexto(grupo.estado);
 
-  document.getElementById('appValor').textContent      = KixikilaManager.formatarValor(grupo.valor) + ' KZ';
+  document.getElementById('appValor').textContent = formatarMoeda(grupo.valor);
   document.getElementById('appProgresso').style.width  = pct + '%';
   document.getElementById('appPagamentos').textContent = pagos + '/' + grupo.membros.length + ' pagamentos';
 
