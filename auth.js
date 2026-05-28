@@ -2,9 +2,8 @@ const API_URL = 'https://sire-kixikila-api.vercel.app';
 
 let _fotoRegTemp  = null;
 let _stepAtual    = 1;
-let _tokenRec     = null; // token temporário de recuperação
+let _tokenRec     = null;
 
-// ── TOAST ─────────────────────────────────────────────────────
 function mostrarToast(msg) {
   const t = document.getElementById('toast');
   if (!t) return;
@@ -13,7 +12,6 @@ function mostrarToast(msg) {
   setTimeout(() => t.classList.remove('show'), 2800);
 }
 
-// ── SESSÃO ────────────────────────────────────────────────────
 function guardarSessao(perfil) {
   localStorage.setItem('kx_sessao', JSON.stringify({ perfil, expira: Date.now() + 7 * 24 * 60 * 60 * 1000 }));
 }
@@ -22,17 +20,17 @@ function guardarToken(token) {
   localStorage.setItem('kx_auth', JSON.stringify({ token, expira: Date.now() + 7 * 24 * 60 * 60 * 1000 }));
 }
 
-// ── REDIRECIONAR SE JÁ AUTENTICADO ───────────────────────────
 (function () {
   try {
     const raw = localStorage.getItem('kx_sessao');
     if (!raw) return;
     const dados = JSON.parse(raw);
-    if (!dados.expira || Date.now() < dados.expira) window.location.href = 'index.html';
-  } catch (_) {}
+    if (dados.expira && Date.now() < dados.expira) window.location.href = 'index.html';
+  } catch (_) {
+    localStorage.removeItem('kx_sessao');
+  }
 })();
 
-// ── RATE LIMIT FRONTEND ───────────────────────────────────────
 const _rl = { count: 0, bloqueadoAte: 0 };
 
 function verificarRlFrontend() {
@@ -51,7 +49,6 @@ function registarFalhaFrontend() {
   }
 }
 
-// ── IMAGEM ────────────────────────────────────────────────────
 async function comprimirImagem(ficheiro, maxDim = 800, q = 0.85) {
   return new Promise((res, rej) => {
     if (!ficheiro?.type.startsWith('image/')) { rej(new Error('Inválido')); return; }
@@ -89,34 +86,29 @@ async function previewFotoReg(evento) {
   } catch { mostrarToast('Erro ao processar imagem'); }
 }
 
-// ── MULTI-STEP REGISTO ────────────────────────────────────────
 const STEP_TITULOS = ['', 'O teu perfil', 'Contacto', 'Localização', 'Segurança'];
 
 function iniciarRegisto() {
   _stepAtual = 1;
-  document.getElementById('cardLogin').style.display    = 'none';
-  document.getElementById('cardRegisto').style.display  = 'block';
+  document.getElementById('cardLogin').style.display   = 'none';
+  document.getElementById('cardRegisto').style.display = 'block';
   renderStep(1);
 }
 
 function mostrarLogin() {
-  document.getElementById('cardLogin').style.display    = 'block';
-  document.getElementById('cardRegisto').style.display  = 'none';
+  document.getElementById('cardLogin').style.display   = 'block';
+  document.getElementById('cardRegisto').style.display = 'none';
 }
 
 function renderStep(n) {
   [1, 2, 3, 4].forEach(i => {
     document.getElementById('step' + i).style.display = i === n ? 'block' : 'none';
-
     const dot  = document.getElementById('sdot' + i);
     const line = document.getElementById('sline' + i);
-
-    dot.className = 'step-dot' + (i === n ? ' activo' : i < n ? ' feito' : '');
+    dot.className   = 'step-dot' + (i === n ? ' activo' : i < n ? ' feito' : '');
     dot.textContent = i < n ? '✓' : String(i);
-
     if (line) line.className = 'step-line' + (i < n ? ' feito' : '');
   });
-
   document.getElementById('stepTitulo').textContent = STEP_TITULOS[n];
 }
 
@@ -137,12 +129,11 @@ function avancarStep(atual) {
 
 function validarStep(n) {
   if (n === 1) {
-    const nome     = document.getElementById('regNome')?.value.trim()    || '';
-    const dataNasc = document.getElementById('regDataNasc')?.value       || '';
+    const nome     = document.getElementById('regNome')?.value.trim() || '';
+    const dataNasc = document.getElementById('regDataNasc')?.value    || '';
     if (!nome)     { mostrarToast('Nome completo é obrigatório'); return false; }
     if (!dataNasc) { mostrarToast('Data de nascimento é obrigatória'); return false; }
-    // Verificar idade mínima (16 anos)
-    const nasc = new Date(dataNasc);
+    const nasc  = new Date(dataNasc);
     const idade = (Date.now() - nasc.getTime()) / (365.25 * 24 * 3600 * 1000);
     if (idade < 16) { mostrarToast('Deves ter pelo menos 16 anos'); return false; }
     return true;
@@ -157,25 +148,22 @@ function validarStep(n) {
     return true;
   }
   if (n === 3) {
-    const pais     = document.getElementById('regPais')?.value     || '';
-    const provincia = document.getElementById('regProvincia')?.value || '';
+    const pais      = document.getElementById('regPais')?.value           || '';
     const municipio = document.getElementById('regMunicipio')?.value.trim() || '';
     if (!pais)      { mostrarToast('Seleciona o país'); return false; }
     if (!municipio) { mostrarToast('Cidade / Bairro é obrigatório'); return false; }
-    // Define moeda com base no país escolhido
     definirPais(pais);
     return true;
   }
   return true;
 }
 
-// ── FORCA SENHA ───────────────────────────────────────────────
 function calcularForca(senha) {
   let p = 0;
-  if (senha.length >= 8)       p++;
-  if (/[A-Z]/.test(senha))     p++;
-  if (/[0-9]/.test(senha))     p++;
-  if (/[^A-Za-z0-9]/.test(senha)) p++;
+  if (senha.length >= 8)           p++;
+  if (/[A-Z]/.test(senha))         p++;
+  if (/[0-9]/.test(senha))         p++;
+  if (/[^A-Za-z0-9]/.test(senha))  p++;
   return p;
 }
 
@@ -183,7 +171,7 @@ function renderForca(barraId, textoId, senha) {
   const barra = document.getElementById(barraId);
   const texto = document.getElementById(textoId);
   if (!barra || !texto) return;
-  const p = calcularForca(senha);
+  const p     = calcularForca(senha);
   const cores = ['', '#c0392b', '#e67e22', '#f1c40f', '#27ae60'];
   const msgs  = ['', 'Fraca', 'Razoável', 'Boa', 'Forte'];
   barra.style.width      = (p * 25) + '%';
@@ -207,7 +195,6 @@ function validarSenhaFrontend(senha) {
   return null;
 }
 
-// ── TERMOS ────────────────────────────────────────────────────
 function verificarScrollTermos() {
   const el        = document.getElementById('termosScroll');
   const hint      = document.getElementById('termosHint');
@@ -229,7 +216,6 @@ function atualizarBotaoCriar() {
   if (btn && chk) btn.disabled = !chk.checked;
 }
 
-// ── REGISTO ───────────────────────────────────────────────────
 async function registar() {
   const hp = document.getElementById('_hp_website');
   if (hp && hp.value !== '') { mostrarToast('Erro ao criar conta'); return; }
@@ -238,7 +224,6 @@ async function registar() {
   const dataNasc  = document.getElementById('regDataNasc')?.value         || '';
   const telefone  = document.getElementById('regTelefone')?.value.trim()  || '';
   const email     = document.getElementById('regEmail')?.value.trim()     || '';
-  const provincia = document.getElementById('regProvincia')?.value        || '';
   const municipio = document.getElementById('regMunicipio')?.value.trim() || '';
   const senha     = document.getElementById('regSenha')?.value            || '';
   const senhaConf = document.getElementById('regSenhaConfirm')?.value     || '';
@@ -248,21 +233,25 @@ async function registar() {
   if (senha !== senhaConf) { mostrarToast('As senhas não coincidem'); return; }
 
   const btn = document.getElementById('btnCriarConta');
-  btn.disabled     = true;
-  btn.textContent  = 'A criar conta...';
+  btn.disabled    = true;
+  btn.textContent = 'A criar conta...';
 
   try {
     const res = await fetch(API_URL + '/auth/registar', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-  telefone, nome, senha,
-  foto_perfil: _fotoRegTemp || undefined,
-  data_nasc: dataNasc, email,
-  pais: document.getElementById('regPais')?.value || 'AO',
-  provincia: document.getElementById('regProvincia')?.value || '',
-  municipio: document.getElementById('regMunicipio')?.value.trim() || ''
-});
+        telefone,
+        nome,
+        senha,
+        foto_perfil: _fotoRegTemp || undefined,
+        data_nasc:   dataNasc,
+        email,
+        pais:      document.getElementById('regPais')?.value            || 'AO',
+        provincia: document.getElementById('regProvincia')?.value       || '',
+        municipio: document.getElementById('regMunicipio')?.value.trim() || ''
+      })
+    });
     const dados = await res.json();
     if (!res.ok) throw new Error(dados.erro);
     guardarSessao(dados.perfil);
@@ -275,7 +264,6 @@ async function registar() {
   }
 }
 
-// ── LOGIN ─────────────────────────────────────────────────────
 async function entrar() {
   if (!verificarRlFrontend()) return;
 
@@ -318,10 +306,10 @@ const REGIOES_POR_PAIS = {
 };
 
 function atualizarProvinciasPorPais() {
-  const pais     = document.getElementById('regPais')?.value;
-  const select   = document.getElementById('regProvincia');
-  const campo    = document.getElementById('campoRegiao');
-  const regioes  = REGIOES_POR_PAIS[pais] || [];
+  const pais    = document.getElementById('regPais')?.value;
+  const select  = document.getElementById('regProvincia');
+  const campo   = document.getElementById('campoRegiao');
+  const regioes = REGIOES_POR_PAIS[pais] || [];
 
   if (regioes.length) {
     select.innerHTML = '<option value="">Selecionar</option>' +
@@ -331,17 +319,15 @@ function atualizarProvinciasPorPais() {
     campo.style.display = 'none';
   }
 
-  // Actualiza moeda em tempo real
   if (typeof definirPais === 'function') definirPais(pais);
 }
 
-// ── RECUPERAR SENHA ───────────────────────────────────────────
 function abrirRecuperar() {
   _tokenRec = null;
-  document.getElementById('recStep1').className = 'rec-step activo';
-  document.getElementById('recStep2').className = 'rec-step';
-  document.getElementById('recTelefone').value   = '';
-  document.getElementById('recDataNasc').value   = '';
+  document.getElementById('recStep1').className        = 'rec-step activo';
+  document.getElementById('recStep2').className        = 'rec-step';
+  document.getElementById('recTelefone').value         = '';
+  document.getElementById('recDataNasc').value         = '';
   document.getElementById('modalRecuperar').style.display = 'flex';
 }
 
@@ -353,7 +339,6 @@ function fecharRecuperar() {
 async function verificarIdentidade() {
   const telefone = document.getElementById('recTelefone')?.value.trim() || '';
   const dataNasc = document.getElementById('recDataNasc')?.value        || '';
-
   if (!telefone || !dataNasc) { mostrarToast('Preenche todos os campos'); return; }
 
   const btn = document.querySelector('#recStep1 .btn-primary');
@@ -367,12 +352,11 @@ async function verificarIdentidade() {
     });
     const dados = await res.json();
     if (!res.ok) throw new Error(dados.erro);
-
     _tokenRec = dados.token_recuperacao;
-    document.getElementById('recStep1').className = 'rec-step';
-    document.getElementById('recStep2').className = 'rec-step activo';
-    document.getElementById('recNovaSenha').value     = '';
-    document.getElementById('recConfirmarSenha').value = '';
+    document.getElementById('recStep1').className       = 'rec-step';
+    document.getElementById('recStep2').className       = 'rec-step activo';
+    document.getElementById('recNovaSenha').value       = '';
+    document.getElementById('recConfirmarSenha').value  = '';
   } catch (e) {
     mostrarToast(e.message);
   } finally {
@@ -383,11 +367,11 @@ async function verificarIdentidade() {
 async function redefinirSenha() {
   if (!_tokenRec) { mostrarToast('Sessão expirada. Recomeça o processo.'); fecharRecuperar(); return; }
 
-  const novaSenha     = document.getElementById('recNovaSenha')?.value     || '';
+  const novaSenha      = document.getElementById('recNovaSenha')?.value      || '';
   const confirmarSenha = document.getElementById('recConfirmarSenha')?.value || '';
 
   const erro = validarSenhaFrontend(novaSenha);
-  if (erro)                       { mostrarToast(erro); return; }
+  if (erro)                         { mostrarToast(erro); return; }
   if (novaSenha !== confirmarSenha) { mostrarToast('As senhas não coincidem'); return; }
 
   const btn = document.querySelector('#recStep2 .btn-primary');
@@ -401,7 +385,6 @@ async function redefinirSenha() {
     });
     const dados = await res.json();
     if (!res.ok) throw new Error(dados.erro);
-
     mostrarToast('Senha alterada com sucesso!');
     fecharRecuperar();
   } catch (e) {
