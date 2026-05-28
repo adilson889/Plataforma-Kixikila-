@@ -398,7 +398,7 @@
 
     <!-- PASSO 2: Contacto -->
     <div id="step2" style="display:none">
-      <div class="campo"><label>Telefone (WhatsApp)</label><input id="regTelefone" type="tel" placeholder="+244 9XX XXX XXX"></div>
+      <div class="campo"><label>Telefone (WhatsApp)</label><input id="regTelefone" type="tel" placeholder="+XX XXX XXX XXX"></div>
       <div class="campo"><label>Email</label><input id="regEmail" type="email" placeholder="exemplo@email.com"></div>
       <button class="btn-primary w100" onclick="avancarStep(2)">Continuar</button>
     </div>
@@ -467,7 +467,7 @@
             <h4 style="margin-top:14px">POLÍTICA DE PRIVACIDADE</h4>
             <p class="termos-data">Última actualização: Maio de 2026</p>
             <p>Cumprimos a Lei n.º 22/11 de Angola. Recolhemos nome, email, telefone, data de nascimento, província e foto. Não vendemos os seus dados.</p>
-            <p class="termos-contacto">Desenvolvedor: Adilson Rafael — <a href="https://wa.me/244921325366" target="_blank" style="color:var(--r)">+244 921 325 366</a></p>
+            
           </div>
         </div>
         <div class="termos-hint" id="termosHint">
@@ -488,12 +488,77 @@
     </div>
   </div>
 
-  <!-- FOOTER -->
-  <div class="login-footer">
-    &copy; 2026 RondaP2P &nbsp;·&nbsp;
-    <a href="https://wa.me/244921325366" target="_blank">Suporte</a>
-    &nbsp;·&nbsp;
+
+
+<div class="login-footer">
+  <div style="margin-bottom:10px">
+    <img src="logo.jpg" alt="RondaP2P" style="width:32px;height:32px;border-radius:8px;vertical-align:middle;margin-right:6px">
+    <span style="font-weight:800;font-size:.88rem;color:var(--text)">RondaP2P</span>
+    <div style="font-size:.72rem;color:var(--muted);margin-bottom:6px">     </div>
+    
+  </div>
+  <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:6px 16px;margin-bottom:10px">
+    <a href="#" onclick="abrirTermos();return false;">Termos de Uso</a>
+    <a href="#" onclick="abrirPrivacidade();return false;">Privacidade</a>
+    <a href="#" onclick="abrirSuporte();return false;">Suporte</a>
     <a href="#" onclick="iniciarRegisto()">Registar</a>
+  </div>
+  <div style="font-size:.72rem;color:var(--muted);margin-bottom:6px">
+    🇦🇴 Angola &nbsp;·&nbsp; 🇧🇷 Brasil &nbsp;·&nbsp; 🇵🇹 Portugal &nbsp;·&nbsp; 🇲🇿 Moçambique &nbsp;·&nbsp; 🇨🇻 Cabo Verde &nbsp;·&nbsp; 🇸🇹 São Tomé &nbsp;·&nbsp; 🇬🇼 Guiné-Bissau &nbsp;·&nbsp; 🇹🇱 Timor-Leste
+  </div>
+  <div style="font-size:.72rem;color:var(--muted)">
+    &copy; 2026 RondaP2P
+  </div>
+</div>
+
+<!-- MODAL SUPORTE -->
+<div id="modalSuporte" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;align-items:center;justify-content:center" onclick="if(event.target===this)this.style.display='none'">
+  <div style="background:var(--bg2);border-radius:20px;padding:24px;max-width:320px;width:90%;text-align:center">
+    <div style="font-weight:800;font-size:1rem;margin-bottom:4px">Suporte</div>
+    <div style="font-size:.82rem;color:var(--muted);margin-bottom:16px">Aponta a câmara ou clica para abrir o WhatsApp</div>
+    <img src="qrcode.jpg" alt="QR Code WhatsApp" style="width:100%;border-radius:12px;margin-bottom:16px">
+    <a href="https://wa.me/244936838703" target="_blank" style="display:block;padding:12px;background:var(--r);color:#fff;border-radius:12px;font-weight:700;text-decoration:none">Abrir WhatsApp</a>
+    <div style="margin-top:12px;font-size:.78rem;color:var(--muted)">Toca fora para fechar</div>
+  </div>
+</div>
+
+<!-- MODAL TERMOS -->
+<div id="modalTermos" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;align-items:flex-end;justify-content:center" onclick="if(event.target===this)this.style.display='none'">
+  <div style="background:var(--bg2);border-radius:20px 20px 0 0;padding:24px 20px 40px;width:100%;max-width:480px;max-height:80vh;overflow-y:auto">
+    <div style="font-weight:800;font-size:1.1rem;margin-bottom:4px">Termos de Uso</div>
+    <div style="font-size:.68rem;color:var(--muted);margin-bottom:16px">Última actualização: Maio de 2026</div>
+    <p style="font-size:.82rem;color:var(--muted);line-height:1.7;margin-bottom:10px">Estes Termos regulam o acesso e utilização da plataforma RondaP2P, disponibilizada por Adilson Rafael (desenvolvedor independente).</p>
+    <h5 style="font-size:.88rem;margin:12px 0 4px">1. Aceitação</h5>
+    <p style="font-size:.82rem;color:var(--muted);line-height:1.7;margin-bottom:10px">Ao utilizar a RondaP2P, concorda com estes Termos na íntegra.</p>
+    <h5 style="font-size:.88rem;margin:12px 0 4px">2. Serviço</h5>
+    <p style="font-size:.82rem;color:var(--muted);line-height:1.7;margin-bottom:10px">A RondaP2P permite criar e gerir grupos de poupança rotativa, lojas e serviços entre particulares. Não realiza cobranças nem guarda dinheiro. Todos os pagamentos são feitos directamente entre participantes.</p>
+    <h5 style="font-size:.88rem;margin:12px 0 4px">3. Responsabilidades</h5>
+    <p style="font-size:.82rem;color:var(--muted);line-height:1.7;margin-bottom:10px">Somos apenas uma ferramenta de organização. Não somos responsáveis por acordos, pagamentos ou conflitos entre membros.</p>
+    <h5 style="font-size:.88rem;margin:12px 0 4px">4. Proibições</h5>
+    <p style="font-size:.82rem;color:var(--muted);line-height:1.7;margin-bottom:10px">É proibido usar a plataforma para actividades ilegais, fraudes ou branqueamento de capitais.</p>
+    <h5 style="font-size:.88rem;margin:12px 0 4px">5. Lei Aplicável</h5>
+    <p style="font-size:.82rem;color:var(--muted);line-height:1.7;margin-bottom:20px">Regido pelas leis de Angola. Disputas resolvidas nos tribunais de Luanda.</p>
+    <button onclick="document.getElementById('modalTermos').style.display='none'" style="width:100%;padding:14px;background:var(--r);color:#fff;border:none;border-radius:14px;font-weight:700;font-size:.95rem;cursor:pointer;font-family:var(--sans)">Fechar</button>
+  </div>
+</div>
+
+<!-- MODAL PRIVACIDADE -->
+<div id="modalPrivacidade" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;align-items:flex-end;justify-content:center" onclick="if(event.target===this)this.style.display='none'">
+  <div style="background:var(--bg2);border-radius:20px 20px 0 0;padding:24px 20px 40px;width:100%;max-width:480px;max-height:80vh;overflow-y:auto">
+    <div style="font-weight:800;font-size:1.1rem;margin-bottom:4px">Política de Privacidade</div>
+    <div style="font-size:.68rem;color:var(--muted);margin-bottom:16px">Última actualização: Maio de 2026</div>
+    <p style="font-size:.82rem;color:var(--muted);line-height:1.7;margin-bottom:10px">Cumprimos a Lei n.º 22/11 de Angola sobre Protecção de Dados Pessoais.</p>
+    <h5 style="font-size:.88rem;margin:12px 0 4px">Dados que recolhemos</h5>
+    <p style="font-size:.82rem;color:var(--muted);line-height:1.7;margin-bottom:10px">Nome, email, telefone, data de nascimento, país, região e foto de perfil.</p>
+    <h5 style="font-size:.88rem;margin:12px 0 4px">Como usamos</h5>
+    <p style="font-size:.82rem;color:var(--muted);line-height:1.7;margin-bottom:10px">Os dados são usados exclusivamente para identificação na plataforma e comunicação entre membros. Não vendemos nem partilhamos com terceiros.</p>
+    <h5 style="font-size:.88rem;margin:12px 0 4px">Segurança</h5>
+    <p style="font-size:.82rem;color:var(--muted);line-height:1.7;margin-bottom:10px">As senhas são encriptadas. Os dados são armazenados em repositório privado com acesso restrito.</p>
+    <h5 style="font-size:.88rem;margin:12px 0 4px">Os seus direitos</h5>
+    <p style="font-size:.82rem;color:var(--muted);line-height:1.7;margin-bottom:10px">Pode eliminar a sua conta a qualquer momento. Todos os seus dados serão removidos permanentemente.</p>
+    <h5 style="font-size:.88rem;margin:12px 0 4px">Contacto</h5>
+    <p style="font-size:.82rem;color:var(--muted);line-height:1.7;margin-bottom:20px">Para questões sobre privacidade contacte: adilsonrafael847@gmail.com</p>
+    <button onclick="document.getElementById('modalPrivacidade').style.display='none'" style="width:100%;padding:14px;background:var(--r);color:#fff;border:none;border-radius:14px;font-weight:700;font-size:.95rem;cursor:pointer;font-family:var(--sans)">Fechar</button>
   </div>
 </div>
 
@@ -536,8 +601,7 @@
 </div>
 
 <div id="toast" class="toast"></div>
-
-<script src="auth.js"></script>
 <script src="moeda.js"></script>
+<script src="auth.js"></script>
 </body>
 </html>
